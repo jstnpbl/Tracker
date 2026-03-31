@@ -863,7 +863,7 @@ function predictRunOut(data, paceData) {
   return { predictions, daysLeft };
 }
 
-// Insight Engine: Generate human-readable insights
+// Insight Engine: Generate human-readable insights with explanation layer
 function generateInsightEngine(data) {
   if (!data.expenses || data.expenses.length === 0) return [];
 
@@ -878,40 +878,46 @@ function generateInsightEngine(data) {
     if (!pred) return;
 
     const label = catLabels[cat] || cat;
-    const avg = pred.dailySpend.toFixed(2);
+    const actual = pred.dailySpend;
+    const avg = actual.toFixed(2);
     const remaining = data.remaining[cat].toFixed(2);
 
+    // Safe limit: what you SHOULD spend per day to last until cutoff end
+    const safeLimit = data.remaining[cat] / daysLeft;
+    const safe = safeLimit.toFixed(2);
+    const diff = actual - safeLimit;
+    const difference = Math.abs(diff).toFixed(2);
+
     if (pred.willRunOut) {
+      // Overspending — explain why
       if (pred.daysUntilEmpty <= 1) {
         insights.push({
           type: "danger",
           icon: "🔴",
-          message: `${label} runs out TODAY at current pace (₱${avg}/day). Only ₱${remaining} left.`
+          message: `${label} runs out TODAY because you're spending ₱${avg}/day, which is ₱${difference} above your safe limit of ₱${safe}/day. Only ₱${remaining} left.`
         });
       } else if (pred.daysUntilEmpty <= 3) {
         insights.push({
           type: "danger",
           icon: "🟠",
-          message: `${label} will run out in ${pred.daysUntilEmpty} days at ₱${avg}/day. Consider slowing down.`
+          message: `${label} will run out in ${pred.daysUntilEmpty} days because you're spending ₱${avg}/day — ₱${difference} above your safe limit of ₱${safe}/day.`
         });
       } else {
         insights.push({
           type: "warning",
           icon: "🟡",
-          message: `${label} may run out in ~${pred.daysUntilEmpty} days (${daysLeft} days left in cutoff). Avg: ₱${avg}/day.`
+          message: `${label} may run out in ~${pred.daysUntilEmpty} days (${daysLeft} left). Spending ₱${avg}/day vs safe limit ₱${safe}/day (+₱${difference}).`
         });
       }
+    } else if (actual > 0) {
+      // Within safe range — positive per-category feedback
+      insights.push({
+        type: "success",
+        icon: "✅",
+        message: `${label} on track — ₱${avg}/day, within your safe limit of ₱${safe}/day.`
+      });
     }
   });
-
-  // Positive insight: if ALL categories are on track
-  if (insights.length === 0 && data.expenses.length >= 2) {
-    insights.push({
-      type: "success",
-      icon: "✅",
-      message: `All budgets on track! ${daysLeft} days remaining with healthy spending pace.`
-    });
-  }
 
   return insights;
 }
