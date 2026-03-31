@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <meta name="theme-color" content="#1565C0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1117">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Budget">
@@ -12,399 +12,175 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <title>Budget Tracker</title>
   <link rel="manifest" href="manifest.json">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f5f5f5;
-      padding: 16px 16px 100px 16px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    h2, h3 {
-      margin-top: 20px;
-      margin-bottom: 10px;
-      color: #333;
-    }
-    #summary {
-      background: white;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    #summary p {
-      margin: 8px 0;
-      font-size: 14px;
-    }
-    #summary p b {
-      color: #d32f2f;
-      font-size: 16px;
-    }
-    .input-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    button {
-      padding: 10px 16px;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 14px;
-    }
-    button:active {
-      background: #1565c0;
-    }
-    #expenseList {
-      list-style: none;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    #expenseList li {
-      padding: 12px 16px;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    #expenseList .expense-info {
-      flex: 1;
-      min-width: 150px;
-    }
-    #expenseList .expense-actions {
-      display: flex;
-      gap: 4px;
-    }
-    #expenseList .expense-amount {
-      min-width: 80px;
-      text-align: right;
-      font-weight: bold;
-    }
-    #expenseList li:last-child {
-      border-bottom: none;
-    }
-    .alert {
-      background: #ffebee;
-      color: #c62828;
-      padding: 12px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
-    .success {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    select {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    .category-row {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    .category-badge {
-      padding: 4px 8px;
-      border-radius: 20px;
-      font-size: 12px;
-      background: #e3f2fd;
-      color: #1976d2;
-      min-width: 60px;
-      text-align: center;
-    }
-    .button-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    button.secondary {
-      background: #757575;
-      flex: 0;
-    }
-    button.danger {
-      background: #d32f2f;
-      flex: 0;
-    }
-    .days-warning {
-      background: #fff3e0;
-      color: #e65100;
-      padding: 12px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .budget-item {
-      background: white;
-      padding: 12px 16px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    .budget-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-weight: 500;
-      font-size: 13px;
-    }
-    .budget-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .budget-amount {
-      font-size: 14px;
-      font-weight: bold;
-      color: #1976d2;
-    }
-    .budget-percentage {
-      font-size: 11px;
-      color: #999;
-      margin-left: 4px;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4caf50, #45a049);
-      border-radius: 4px;
-      transition: width 0.3s ease;
-    }
-    .progress-fill.warning {
-      background: linear-gradient(90deg, #ff9800, #f57c00);
-    }
-    .progress-fill.danger {
-      background: linear-gradient(90deg, #f44336, #d32f2f);
-    }
-    .total-remaining {
-      background: linear-gradient(135deg, #1976d2, #1565c0);
-      color: white;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
-    }
-    .total-remaining-label {
-      font-size: 12px;
-      opacity: 0.9;
-      margin-bottom: 4px;
-    }
-    .total-remaining-amount {
-      font-size: 28px;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-    .total-remaining-subtext {
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    #expenseInputSection {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      padding: 12px 16px 16px 16px;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-      max-width: 500px;
-      margin: 0 auto;
-      display: none;
-    }
-    #expenseInputSection.show {
-      display: block;
-    }
-    #expenseInputSection h3 {
-      margin-top: 0;
-    }
-    #offlineBanner {
-      display: none;
-      background: #d32f2f;
-      color: white;
-      text-align: center;
-      padding: 10px;
-      font-weight: 600;
-      font-size: 14px;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .safe-daily-block {
-      text-align: center;
-      margin-bottom: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      background: #ffffff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      border: 2px solid #e0e0e0;
-      transition: all 0.3s ease;
-    }
-    .safe-daily-label {
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
-    .safe-daily-amount {
-      font-size: 32px;
-      font-weight: 800;
-    }
-    .status-green { border-color: #4caf50; background: #e8f5e9; }
-    .status-green .safe-daily-label { color: #2e7d32; }
-    .status-green .safe-daily-amount { color: #1b5e20; }
-    .status-yellow { border-color: #ff9800; background: #fff3e0; }
-    .status-yellow .safe-daily-label { color: #f57c00; }
-    .status-yellow .safe-daily-amount { color: #e65100; }
-    .status-red { border-color: #f44336; background: #ffebee; }
-    .status-red .safe-daily-label { color: #d32f2f; }
-    .status-red .safe-daily-amount { color: #b71c1c; }
-    
-    .review-screen {
-      text-align: center;
-      padding: 20px 16px;
-    }
-    .review-emoji {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-    .review-title {
-      font-size: 20px;
-      font-weight: bold;
-      color: #1976d2;
-      margin-bottom: 20px;
-    }
-    .review-stat {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
-    }
-    .review-new-income {
-      margin-top: 24px;
-      background: #f0f7ff;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(25,118,210,0.1);
-    }
-    
-    .audit-log {
-      background: white;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .audit-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #666;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .audit-item {
-      font-size: 11px;
-      padding: 6px 0;
-      border-bottom: 1px solid #f0f0f0;
-      color: #555;
-    }
-    .audit-item:last-child {
-      border-bottom: none;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="offlineBanner">Offline Mode Active</div>
 
-<h2>💰 Budget Tracker</h2>
+<div id="offlineBanner">📡 Offline Mode Active</div>
 
-<div id="summary"></div>
+<!-- App Header -->
+<div class="app-header">
+  <div class="app-title">💰 Budget</div>
+  <div class="header-actions">
+    <button class="header-btn" onclick="exportData()" title="Export">📥</button>
+    <button class="header-btn" onclick="resetCutoff()" title="Reset">🔄</button>
+  </div>
+</div>
 
+<!-- Toast Alert -->
 <div id="alert"></div>
 
-<h3>Add Income (1 cutoff = 15 days)</h3>
-<div class="input-group">
-  <input type="number" id="incomeInput" placeholder="Enter income" step="0.01" min="1">
-  <button onclick="addIncome()">Add Income</button>
+<!-- Tab Content Area -->
+<div class="tab-content">
+
+  <!-- ═══ TAB 1: DASHBOARD ═══ -->
+  <div id="tabDashboard" class="tab-view active">
+    <div id="summary"></div>
+
+    <!-- Income section (always visible) -->
+    <div class="income-card">
+      <h3>💼 Add Income (1 cutoff = 15 days)</h3>
+      <div class="input-group" style="margin-bottom:0;">
+        <input type="number" id="incomeInput" placeholder="Enter income (₱)" step="0.01" min="1">
+        <button onclick="addIncome()">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2: EXPENSES ═══ -->
+  <div id="tabExpenses" class="tab-view">
+    <div style="margin-bottom: 12px;">
+      <div class="card-title">📝 Expense List</div>
+    </div>
+    <div class="button-group">
+      <button onclick="resetCutoff()" class="danger" style="flex:1; font-size:12px;">Reset Cutoff</button>
+      <button onclick="exportData()" class="secondary" style="flex:1; font-size:12px;">📥 Export</button>
+    </div>
+    <ul id="expenseList"></ul>
+  </div>
+
+  <!-- ═══ TAB 3: HISTORY ═══ -->
+  <div id="tabHistory" class="tab-view">
+    <div style="margin-bottom: 12px;">
+      <div class="card-title">📊 Cutoff History</div>
+    </div>
+    <div id="historyList"></div>
+  </div>
 </div>
 
-<h3>Expenses</h3>
-<div class="button-group">
-  <button onclick="resetCutoff()" class="secondary danger" style="flex: 1;">Reset Cutoff</button>
-  <button onclick="exportData()" class="secondary" style="flex: 1;">📥 Export Data</button>
-</div>
-<ul id="expenseList"></ul>
-
+<!-- Quick Add Expense (fixed bottom overlay) -->
 <div id="expenseInputSection">
-  <h3 style="margin-bottom: 12px;">📝 Quick Add Expense</h3>
-  <div style="margin-bottom: 12px;">
-    <label style="font-size: 12px; color: #666;">Category:</label>
-    <select id="expenseCategory">
-      <option value="">Auto-detect</option>
-      <option value="Food">🍔 Food (Survival)</option>
-      <option value="Transpo">🚌 Transpo (Survival)</option>
-      <option value="Needs">🛡️ Needs (Stability)</option>
-      <option value="Wants">🎮 Wants (Wants)</option>
-      <option value="Misc">📦 Misc (Future)</option>
+  <h3>⚡ Quick Add</h3>
+  <div style="margin-bottom: 10px;">
+    <select id="expenseCategory" style="width:100%; margin-bottom:6px;">
+      <option value="">🔍 Auto-detect</option>
+      <option value="Food">🍔 Food</option>
+      <option value="Transpo">🚌 Transpo</option>
+      <option value="Needs">🛡️ Needs</option>
+      <option value="Wants">🎮 Wants</option>
+      <option value="Misc">📦 Misc</option>
     </select>
-    <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
-      <button onclick="setQuickCategory('Food')" style="flex: 0; background: #ff9800; padding: 6px 10px; font-size: 12px;">🍔 Food</button>
-      <button onclick="setQuickCategory('Transpo')" style="flex: 0; background: #2196f3; padding: 6px 10px; font-size: 12px;">🚌 Transpo</button>
-      <button onclick="setQuickCategory('Wants')" style="flex: 0; background: #9c27b0; padding: 6px 10px; font-size: 12px;">🎮 Wants</button>
-      <button onclick="setQuickCategory('')" style="flex: 0; background: #666; padding: 6px 10px; font-size: 12px;">🔄 Auto</button>
+    <div class="quick-cats">
+      <button onclick="setQuickCategory('Food')" class="quick-cat-btn" style="background:rgba(251,146,60,0.2);color:#fb923c;">🍔 Food</button>
+      <button onclick="setQuickCategory('Transpo')" class="quick-cat-btn" style="background:rgba(74,158,255,0.2);color:#4a9eff;">🚌 Transpo</button>
+      <button onclick="setQuickCategory('Wants')" class="quick-cat-btn" style="background:rgba(167,139,250,0.2);color:#a78bfa;">🎮 Wants</button>
+      <button onclick="setQuickCategory('')" class="quick-cat-btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">🔄 Auto</button>
     </div>
   </div>
   <div class="input-group" style="margin-bottom: 0;">
-    <input type="number" id="expenseAmount" placeholder="Amount" step="0.01" min="0.01">
-    <input type="text" id="expenseNote" placeholder="Note">
-    <button onclick="addExpense()" style="font-weight: bold;">Add</button>
+    <input type="number" id="expenseAmount" placeholder="₱ Amount" step="0.01" min="0.01">
+    <input type="text" id="expenseNote" placeholder="What for?">
+    <button onclick="addExpense()" style="font-weight:700;">+</button>
   </div>
 </div>
 
+<!-- Bottom Tab Bar -->
+<nav class="tab-bar">
+  <button class="tab-bar-item active" onclick="switchTab('Dashboard')">
+    <span class="tab-icon">💰</span>
+    Dashboard
+  </button>
+  <button class="tab-bar-item" onclick="switchTab('Expenses')">
+    <span class="tab-icon">📝</span>
+    Expenses
+  </button>
+  <button class="tab-bar-item" onclick="switchTab('History')">
+    <span class="tab-icon">📊</span>
+    History
+  </button>
+</nav>
+
 <script>
-  // Override alert to show custom alert
+  // Override alert to show custom toast
   const originalAlert = window.alert;
   window.alert = function(msg) {
     const alertDiv = document.getElementById("alert");
     alertDiv.innerHTML = `<div class="alert">${msg}</div>`;
     setTimeout(() => alertDiv.innerHTML = '', 3000);
   };
+
+  // Tab Switching
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab-bar-item').forEach(b => b.classList.remove('active'));
+
+    document.getElementById('tab' + tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    // Show/hide quick add based on tab
+    const inputSection = document.getElementById('expenseInputSection');
+    if (tabName === 'Expenses' && inputSection.classList.contains('show')) {
+      inputSection.style.display = 'block';
+    } else if (tabName === 'Dashboard' && inputSection.classList.contains('show')) {
+      inputSection.style.display = 'block';
+    } else {
+      inputSection.style.display = 'none';
+    }
+
+    // Render history when switching to that tab
+    if (tabName === 'History') {
+      renderHistory();
+    }
+  }
+
+  // Render history tab
+  function renderHistory() {
+    const historyList = document.getElementById('historyList');
+    const history = JSON.parse(localStorage.getItem('budget_app_history') || '[]');
+
+    if (history.length === 0) {
+      historyList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <p>No completed cutoffs yet.<br>Your finished cycles will appear here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    historyList.innerHTML = history.slice().reverse().map((c, i) => {
+      const spentPct = c.income > 0 ? Math.min((c.totalSpent / c.income) * 100, 100) : 0;
+      const startDate = new Date(c.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+      const endDate = new Date(c.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      return `
+        <div class="history-card">
+          <div class="history-date">📅 ${startDate} – ${endDate}</div>
+          <div class="history-amounts">
+            <span class="history-income">₱${c.income.toFixed(2)}</span>
+            <span class="history-saved">+₱${c.saved.toFixed(2)} saved</span>
+          </div>
+          <div class="history-bar">
+            <div class="history-bar-fill" style="width:${spentPct}%"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text-muted);">
+            <span>Spent: ₱${c.totalSpent.toFixed(2)}</span>
+            <span>${spentPct.toFixed(0)}% used</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 </script>
 <script src="app.js"></script>
 </body>

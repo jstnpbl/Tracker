@@ -967,27 +967,37 @@ function render() {
     ${suggestionsHtml}
     ${anomalyHtml}
     ${progressIndHtml}
-    ${pastPerfHtml}
-    <div class="total-remaining">
-      <div class="total-remaining-label">Total Remaining</div>
-      <div class="total-remaining-amount">₱${totalRemaining.toFixed(2)}</div>
-      <div class="total-remaining-subtext">Spent: ₱${spent.toFixed(2)} / ₱${total.toFixed(2)}</div>
-    </div>
-    <p style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">Cutoff Ends: ${endDate.toLocaleDateString()} (${daysLeft} days left)</p>
     ${(() => {
       const survivalPct = data.budgets.survival > 0 ? (data.remaining.survival / data.budgets.survival) * 100 : 0;
       let safeDailyClass = "status-green";
-      if (survivalPct < 20) safeDailyClass = "status-red";
-      else if (survivalPct <= 50) safeDailyClass = "status-yellow";
+      let progressColor = "var(--accent-green)";
+      if (survivalPct < 20) { safeDailyClass = "status-red"; progressColor = "var(--accent-red)"; }
+      else if (survivalPct <= 50) { safeDailyClass = "status-yellow"; progressColor = "var(--accent-yellow)"; }
       
       return `
-        <div class="safe-daily-block ${safeDailyClass}">
-          <div class="safe-daily-label">Safe Daily Spend</div>
-          <div class="safe-daily-amount">₱${safe.toFixed(2)}</div>
+        <div class="hero-card ${safeDailyClass}">
+          <div class="hero-label">Safe to Spend Today</div>
+          <div class="hero-amount">₱${safe.toFixed(2)}</div>
+          <div class="hero-meta">
+            <span>📅 ${daysLeft} days left</span>
+            <span>💰 ₱${data.remaining.survival.toFixed(2)} rem.</span>
+          </div>
+          <div class="hero-progress">
+             <div class="hero-progress-fill" style="width: ${Math.max(0, Math.min(survivalPct, 100))}%; background: ${progressColor};"></div>
+          </div>
         </div>
       `;
     })()}
-    ${paceHtml}
+    
+    <div class="total-remaining" style="margin-top: 16px;">
+      <div class="total-remaining-label">Total Remaining (All Budgets)</div>
+      <div class="total-remaining-amount">₱${totalRemaining.toFixed(2)}</div>
+      <div class="total-remaining-subtext">Spent: ₱${spent.toFixed(2)} / ₱${total.toFixed(2)}</div>
+    </div>
+    
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; margin-top: 20px;">
+        🎯 Category Breakdown
+    </div>
     ${insightsHtml}
     ${breakdownHtml}
     ${progressBars}
@@ -1305,3 +1315,4 @@ updateOfflineStatus();
 loadLastCategory();
 initializeInputHandlers();
 render();
+if (typeof switchTab === 'function') switchTab('Dashboard');
