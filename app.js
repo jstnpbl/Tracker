@@ -33,20 +33,20 @@ function saveCutoffHistory(history) {
 function analyzeBehaviorPatterns() {
   const history = getCutoffHistory();
   if (history.length < 2) return null;
-  
+
   // Calculate average spending per category across history
   const categoryStats = { survival: [], stability: [], wants: [], future: [] };
   const categoryBudgets = { survival: [], stability: [], wants: [], future: [] };
-  
+
   history.forEach(cutoff => {
     ["survival", "stability", "wants", "future"].forEach(cat => {
-      const budgetAlloc = cutoff.totalBudget > 0 
+      const budgetAlloc = cutoff.totalBudget > 0
         ? (Object.values(cutoff.expenses || []).filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0))
         : 0;
       categoryStats[cat].push(budgetAlloc);
     });
   });
-  
+
   // Find which categories user consistently overspends in
   const patterns = {};
   Object.entries(categoryStats).forEach(([cat, amounts]) => {
@@ -60,7 +60,7 @@ function analyzeBehaviorPatterns() {
       };
     }
   });
-  
+
   return patterns;
 }
 
@@ -69,20 +69,20 @@ function generateSmartSuggestions(data) {
   const suggestions = [];
   const pace = analyzeSpendingPace(data);
   const daysLeft = getDaysRemaining(data.endDate);
-  
+
   if (!pace || pace.onTrack) return suggestions;
-  
+
   // If projected to overspend, suggest where to cut
   if (pace.overspendBy > 0) {
     const wantsSpent = data.budgets.wants - data.remaining.wants;
     const wantsPct = (wantsSpent / data.budgets.wants) * 100;
-    
+
     // If wants is a priority to reduce
     if (data.remaining.wants > 0 && wantsPct >= 50) {
       const dailyWants = wantsSpent / Math.max(1, Math.ceil((new Date() - new Date(data.startDate)) / (1000 * 60 * 60 * 24)));
       const safeWantsDaily = data.remaining.wants / daysLeft;
       const needToSave = dailyWants - safeWantsDaily;
-      
+
       if (needToSave > 50) {
         suggestions.push({
           type: "reduction",
@@ -93,7 +93,7 @@ function generateSmartSuggestions(data) {
         });
       }
     }
-    
+
     // Suggest survival adjustment if critical
     const survivalRatio = data.remaining.survival / data.budgets.survival;
     if (survivalRatio < 0.2 && data.remaining.wants > 0) {
@@ -109,7 +109,7 @@ function generateSmartSuggestions(data) {
       }
     }
   }
-  
+
   // Pattern-based suggestions from history
   const patterns = analyzeBehaviorPatterns();
   if (patterns) {
@@ -125,24 +125,24 @@ function generateSmartSuggestions(data) {
       }
     });
   }
-  
+
   return suggestions;
 }
 
 // Phase 5: Detect anomalies (spending spikes)
 function detectAnomalies(data) {
   if (data.expenses.length < 3) return null;
-  
+
   // Calculate average expense amount
   const avgExpense = data.expenses.reduce((sum, e) => sum + e.amount, 0) / data.expenses.length;
   const stdDev = Math.sqrt(
     data.expenses.reduce((sum, e) => sum + Math.pow(e.amount - avgExpense, 2), 0) / data.expenses.length
   );
-  
+
   // Find anomalies (expenses > 2 std devs above average)
   const threshold = avgExpense + (2 * stdDev);
   const anomalies = data.expenses.filter(e => e.amount > threshold);
-  
+
   if (anomalies.length > 0) {
     return {
       count: anomalies.length,
@@ -150,7 +150,7 @@ function detectAnomalies(data) {
       examples: anomalies.slice(-2) // Last 2 anomalies
     };
   }
-  
+
   return null;
 }
 
@@ -158,7 +158,7 @@ function detectAnomalies(data) {
 function suggestBudgetReallocation(data) {
   const history = getCutoffHistory();
   if (history.length < 2) return null;
-  
+
   // Calculate actual spending percentages from history
   const avgSpendByCategory = { survival: 0, stability: 0, wants: 0, future: 0 };
   history.forEach(cutoff => {
@@ -168,11 +168,11 @@ function suggestBudgetReallocation(data) {
       avgSpendByCategory[cat] += (catSpent / cutoff.totalBudget) * 100;
     });
   });
-  
+
   Object.keys(avgSpendByCategory).forEach(cat => {
     avgSpendByCategory[cat] = avgSpendByCategory[cat] / history.length;
   });
-  
+
   // Current allocation
   const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
   const currentAlloc = {
@@ -181,10 +181,10 @@ function suggestBudgetReallocation(data) {
     wants: (data.budgets.wants / total) * 100,
     future: (data.budgets.future / total) * 100
   };
-  
+
   const suggestions = [];
   const threshold = 10; // 10% variance threshold
-  
+
   Object.keys(avgSpendByCategory).forEach(cat => {
     const diff = avgSpendByCategory[cat] - currentAlloc[cat];
     if (Math.abs(diff) > threshold) {
@@ -205,7 +205,7 @@ function suggestBudgetReallocation(data) {
       }
     }
   });
-  
+
   return suggestions.length > 0 ? suggestions : null;
 }
 
@@ -213,14 +213,14 @@ function suggestBudgetReallocation(data) {
 function generateProgressIndicator(data) {
   const history = getCutoffHistory();
   if (history.length < 2) return null;
-  
+
   const last = history[history.length - 1];
   const prev = history[history.length - 2];
-  
+
   const lastSavingsRate = (last.saved / last.income) * 100;
   const prevSavingsRate = (prev.saved / prev.income) * 100;
   const improvement = lastSavingsRate - prevSavingsRate;
-  
+
   return {
     lastRate: lastSavingsRate,
     prevRate: prevSavingsRate,
@@ -232,20 +232,20 @@ function generateProgressIndicator(data) {
 // Phase 6: Generate category breakdown for visualization
 function generateCategoryBreakdown(data) {
   const breakdown = { survival: 0, stability: 0, wants: 0, future: 0 };
-  
+
   data.expenses.forEach(exp => {
     if (breakdown.hasOwnProperty(exp.category)) {
       breakdown[exp.category] += exp.amount;
     }
   });
-  
+
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
   const percentages = {};
-  
+
   Object.keys(breakdown).forEach(cat => {
     percentages[cat] = total > 0 ? (breakdown[cat] / total) * 100 : 0;
   });
-  
+
   return { breakdown, percentages, total };
 }
 
@@ -254,7 +254,7 @@ function createCategoryBreakdownHtml(data) {
   const { breakdown, percentages } = generateCategoryBreakdown(data);
   const icons = { survival: "🍔", stability: "🛡️", wants: "🎮", future: "🚀" };
   const colors = { survival: "#ff9800", stability: "#2196f3", wants: "#9c27b0", future: "#4caf50" };
-  
+
   const items = Object.entries(breakdown)
     .filter(([cat, amount]) => amount > 0)
     .sort((a, b) => b[1] - a[1])
@@ -270,7 +270,7 @@ function createCategoryBreakdownHtml(data) {
       </div>
     `)
     .join("");
-  
+
   return items.length > 0 ? `
     <div style="background: #f9f9f9; padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e0e0e0; font-size: 12px;">
       <div style="font-weight: 500; margin-bottom: 8px;">📊 Spending Breakdown</div>
@@ -285,7 +285,7 @@ function archiveCurrentCutoff(data) {
   const history = getCutoffHistory();
   const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
   const spent = total - (data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future);
-  
+
   history.push({
     startDate: data.startDate,
     endDate: data.endDate,
@@ -296,7 +296,7 @@ function archiveCurrentCutoff(data) {
     expenses: data.expenses,
     timestamp: new Date().toISOString()
   });
-  
+
   saveCutoffHistory(history);
 }
 
@@ -494,15 +494,16 @@ function addExpense() {
   // Hide category preview
   const preview = document.getElementById('categoryPreview');
   if (preview) preview.classList.remove('visible');
-  
+
   showMessage(`✓ Expense added to ${category}`, "success");
-  
+
   // Auto-collapse Quick Add panel so user can see expenses
   const panel = document.getElementById('expenseInputSection');
   if (panel) panel.classList.add('collapsed');
-  
+
   render();
-  
+  triggerPulse();
+
   // Scroll to newest expense and highlight it
   setTimeout(() => {
     const list = document.getElementById('expenseList');
@@ -511,6 +512,16 @@ function addExpense() {
       list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, 50);
+}
+
+// Subtle pulse animation on hero card for feedback
+function triggerPulse() {
+  const hero = document.querySelector('.hero-card');
+  if (hero) {
+    hero.classList.remove('pulse');
+    void hero.offsetWidth;
+    hero.classList.add('pulse');
+  }
 }
 
 // Safe daily spend
@@ -523,7 +534,7 @@ function getSafeDaily(data) {
   // FIX BUG #3: Use Math.floor instead of ceil to be conservative
   // This prevents showing unrealistic safe daily amounts
   let daysLeft = Math.floor((end - today) / (1000 * 60 * 60 * 24));
-  
+
   // FIX BUG #4: If less than 1 day remains, show 1 day (user must finish today)
   if (daysLeft < 1) daysLeft = 1;
 
@@ -573,22 +584,22 @@ function analyzeSpendingPace(data) {
   start.setHours(0, 0, 0, 0);
   const end = new Date(data.endDate);
   end.setHours(0, 0, 0, 0);
-  
+
   const daysElapsed = Math.ceil((today - start) / (1000 * 60 * 60 * 24));
   const daysTotal = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
   const daysLeft = getDaysRemaining(data.endDate);
-  
+
   if (daysElapsed <= 0) return null;
-  
-  const totalSpent = data.budgets.survival - data.remaining.survival + 
-                     data.budgets.stability - data.remaining.stability + 
-                     data.budgets.wants - data.remaining.wants + 
-                     data.budgets.future - data.remaining.future;
-  
+
+  const totalSpent = data.budgets.survival - data.remaining.survival +
+    data.budgets.stability - data.remaining.stability +
+    data.budgets.wants - data.remaining.wants +
+    data.budgets.future - data.remaining.future;
+
   const avgDailySpend = totalSpent / daysElapsed;
   const projectedTotal = avgDailySpend * daysTotal;
   const budget = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
-  
+
   return {
     avgDailySpend,
     projectedTotal,
@@ -604,15 +615,15 @@ function predictCategoryRunOut(data) {
   const today = new Date();
   const daysLeft = getDaysRemaining(data.endDate);
   const runOuts = [];
-  
+
   ["survival", "stability", "wants"].forEach(cat => {
     if (data.expenses.length === 0) return;
-    
+
     // Calculate daily spend for this category
     const spent = data.budgets[cat] - data.remaining[cat];
     const daysPassed = Math.max(1, Math.ceil((today - new Date(data.startDate)) / (1000 * 60 * 60 * 24)));
     const dailySpend = spent / daysPassed;
-    
+
     if (dailySpend > 0 && data.remaining[cat] > 0) {
       const daysUntilRunOut = Math.floor(data.remaining[cat] / dailySpend);
       if (daysUntilRunOut < daysLeft && daysUntilRunOut >= 0) {
@@ -624,23 +635,23 @@ function predictCategoryRunOut(data) {
       }
     }
   });
-  
+
   return runOuts.sort((a, b) => a.daysUntilRunOut - b.daysUntilRunOut);
 }
 
 // Phase 3: Generate spending insights
 function generateSpendingInsights(data) {
   if (data.expenses.length === 0) return null;
-  
+
   // Calculate category spending breakdown
   const categoryTotals = { survival: 0, stability: 0, wants: 0, future: 0 };
   const categoryCount = { survival: 0, stability: 0, wants: 0, future: 0 };
-  
+
   data.expenses.forEach(exp => {
     categoryTotals[exp.category] += exp.amount;
     categoryCount[exp.category] += 1;
   });
-  
+
   // Find highest spending category
   let highestCat = null;
   let highestAmount = 0;
@@ -650,12 +661,12 @@ function generateSpendingInsights(data) {
       highestCat = cat;
     }
   });
-  
+
   // Calculate spending rate
   const daysPassed = Math.max(1, Math.ceil((new Date() - new Date(data.startDate)) / (1000 * 60 * 60 * 24)));
   const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
   const avgDaily = totalSpent / daysPassed;
-  
+
   return {
     highestCat,
     highestAmount,
@@ -673,7 +684,7 @@ function generateSmartWarnings(data) {
   const safe = getSafeDaily(data);
   const daysLeft = getDaysRemaining(data.endDate);
   const pace = analyzeSpendingPace(data);
-  
+
   // Warning 1: Low survival budget
   if (data.remaining.survival < safe * 2 && data.remaining.survival > 0) {
     warnings.push({
@@ -682,7 +693,7 @@ function generateSmartWarnings(data) {
       message: `Survival budget low. Only ${(data.remaining.survival / safe).toFixed(1)} days of safe spending left.`
     });
   }
-  
+
   // Warning 2: Overspending trajectory
   if (pace && !pace.onTrack) {
     warnings.push({
@@ -691,7 +702,7 @@ function generateSmartWarnings(data) {
       message: `Spending pace high! Projected overspend: ₱${pace.overspendBy.toFixed(2)}`
     });
   }
-  
+
   // Warning 3: Very low time
   if (daysLeft <= 1 && daysLeft > 0) {
     warnings.push({
@@ -700,7 +711,7 @@ function generateSmartWarnings(data) {
       message: `Last day of cutoff! Create new income tomorrow.`
     });
   }
-  
+
   // Warning 4: Category run-out prediction
   const runOuts = predictCategoryRunOut(data);
   if (runOuts.length > 0) {
@@ -726,13 +737,13 @@ function generateSmartWarnings(data) {
       });
     }
   }
-  
+
   // Warning 5: Category pressure detection (spending too fast relative to remaining days)
   const categories = ["survival", "stability", "wants"];
   categories.forEach(cat => {
     const spent = data.budgets[cat] - data.remaining[cat];
     const percentage = (spent / data.budgets[cat]) * 100;
-    
+
     if (percentage >= 85 && percentage < 95) {
       warnings.push({
         type: "caution",
@@ -747,8 +758,8 @@ function generateSmartWarnings(data) {
       });
     }
   });
-  
-  
+
+
   return warnings;
 }
 
@@ -762,17 +773,17 @@ function createProgressBar(parentCat, remaining, budgeted, expenses) {
 
   // Summarize sub-categories for this parent
   const subCatTotals = {};
-  for(let exp of expenses) {
-     const pCat = getParentCategory(exp.category);
-     if (pCat === parentCat || (exp.parentBudget && exp.parentBudget === parentCat)) {
-         subCatTotals[exp.category] = (subCatTotals[exp.category] || 0) + exp.amount;
-     }
+  for (let exp of expenses) {
+    const pCat = getParentCategory(exp.category);
+    if (pCat === parentCat || (exp.parentBudget && exp.parentBudget === parentCat)) {
+      subCatTotals[exp.category] = (subCatTotals[exp.category] || 0) + exp.amount;
+    }
   }
 
   // Format subcat text e.g. "Food: ₱100 | Transpo: ₱50"
   const subcatHtml = Object.keys(subCatTotals).length > 0
-      ? Object.entries(subCatTotals).map(([k,v]) => `${k}: ₱${v.toFixed(2)}`).join(" | ")
-      : "No expenses";
+    ? Object.entries(subCatTotals).map(([k, v]) => `${k}: ₱${v.toFixed(2)}`).join(" | ")
+    : "No expenses";
 
   return `
     <div class="budget-item">
@@ -806,17 +817,17 @@ function render() {
     document.getElementById("expenseList").innerHTML = "";
     return;
   }
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const end = new Date(data.endDate);
   end.setHours(0, 0, 0, 0);
-  
+
   if (today > end) {
     if (inputSection) inputSection.classList.remove("show");
     const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
     const spent = total - (data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future);
-    
+
     document.getElementById("summary").innerHTML = `
       <div class="review-screen">
         <div class="review-emoji">🏁</div>
@@ -844,7 +855,7 @@ function render() {
   const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
   const spent = total - (data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future);
   const totalRemaining = data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future;
-  
+
   // Get smart warnings
   const warnings = generateSmartWarnings(data);
   const pace = analyzeSpendingPace(data);
@@ -853,7 +864,7 @@ function render() {
   if (daysLeft <= 3 && daysLeft > 0) {
     warningHtml = `<div class="days-warning">⏰ Only ${daysLeft} day${daysLeft === 1 ? "" : "s"} left in this cutoff</div>`;
   }
-  
+
   // Add smart warnings
   let smartWarningsHtml = "";
   if (warnings.length > 0) {
@@ -873,7 +884,7 @@ function render() {
     ${createProgressBar("wants", data.remaining.wants, data.budgets.wants, data.expenses)}
     ${createProgressBar("future", data.remaining.future, data.budgets.future, data.expenses)}
   `;
-  
+
   // Spending pace info
   let paceHtml = "";
   if (pace) {
@@ -891,7 +902,7 @@ function render() {
       </div>
     `;
   }
-  
+
   // Spending insights (Phase 3)
   let insightsHtml = "";
   const insights = generateSpendingInsights(data);
@@ -900,7 +911,7 @@ function render() {
     const catName = insights.highestCat.charAt(0).toUpperCase() + insights.highestCat.slice(1);
     const insight1 = `Most spending in ${catName} (₱${insights.highestAmount.toFixed(2)})`;
     const insight2 = `Avg daily: ₱${insights.avgDaily.toFixed(2)}`;
-    
+
     insightsHtml = `
       <div style="background: #f0f7ff; padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #1976d2; font-size: 12px;">
         <div style="font-weight: 500; color: #1565c0; margin-bottom: 4px;">💡 Insights</div>
@@ -911,10 +922,10 @@ function render() {
       </div>
     `;
   }
-  
+
   // Phase 6: Category breakdown chart
   let breakdownHtml = createCategoryBreakdownHtml(data);
-  
+
   // Phase 4: Past performance display
   let pastPerfHtml = "";
   const pastPerf = getPastPerformanceSummary();
@@ -929,7 +940,7 @@ function render() {
       </div>
     `;
   }
-  
+
   // Phase 5: Progress indicator (are you improving?)
   let progressIndHtml = "";
   const progressInd = generateProgressIndicator(data);
@@ -943,7 +954,7 @@ function render() {
       trendEmoji = "📉";
       trendColor = "#d32f2f";
     }
-    
+
     progressIndHtml = `
       <div style="background: #f3e5f5; border-left: 3px solid ${trendColor}; padding: 10px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 12px;">
         <div style="font-weight: 500; margin-bottom: 3px;">${trendEmoji} Your Trend: ${progressInd.trend.toUpperCase()}</div>
@@ -953,7 +964,7 @@ function render() {
       </div>
     `;
   }
-  
+
   // Phase 5: Smart suggestions display 
   let suggestionsHtml = "";
   const suggestions = generateSmartSuggestions(data);
@@ -973,7 +984,7 @@ function render() {
       `;
     }).join("");
   }
-  
+
   // Phase 5: Anomaly detection display
   let anomalyHtml = "";
   const anomalies = detectAnomalies(data);
@@ -981,7 +992,7 @@ function render() {
     anomalyHtml = `
       <div style="background: #fce4ec; border-left: 3px solid #f50057; padding: 10px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 12px;">
         <div style="font-weight: 500; margin-bottom: 3px;">🔍 Unusual Spending</div>
-        <div style="color: #333; font-size: 11px;">Found ${anomalies.count} spike$(anomalies.count > 1 ? 's' : '') (avg: ₱${anomalies.avgAnomalyValue.toFixed(0)})</div>
+        <div style="color: #333; font-size: 11px;">Found ${anomalies.count} spike${anomalies.count > 1 ? 's' : ''} (avg: ₱${anomalies.avgAnomalyValue.toFixed(0)})</div>
       </div>
     `;
   }
@@ -998,13 +1009,17 @@ function render() {
       let progressColor = "var(--accent-green)";
       if (survivalPct < 20) { safeDailyClass = "status-red"; progressColor = "var(--accent-red)"; }
       else if (survivalPct <= 50) { safeDailyClass = "status-yellow"; progressColor = "var(--accent-yellow)"; }
-      
+
+      const startD = new Date(data.startDate);
+      startD.setHours(0, 0, 0, 0);
+      const dayNum = Math.floor((today - startD) / (1000 * 60 * 60 * 24)) + 1;
+
       return `
         <div class="hero-card ${safeDailyClass}">
           <div class="hero-label">Safe to Spend Today</div>
           <div class="hero-amount">₱${safe.toFixed(2)}</div>
           <div class="hero-meta">
-            <span>📅 ${daysLeft} days left</span>
+            <span>📅 Day ${dayNum} of 15</span>
             <span>💰 ₱${data.remaining.survival.toFixed(2)} rem.</span>
           </div>
           <div class="hero-progress">
@@ -1035,12 +1050,12 @@ function render() {
         const recentAudits = data.auditLog.slice(-5).reverse();
         listHtml = recentAudits.map(log => {
           const typeLabel = log.action === "DELETE" ? "🗑️ Del" : "✏️ Edit";
-          const dateStr = new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          const dateStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           let diffText = "";
           if (log.action === "DELETE") {
-             diffText = `${log.originalValue.note} (₱${log.originalValue.amount.toFixed(2)})`;
+            diffText = `${log.originalValue.note} (₱${log.originalValue.amount.toFixed(2)})`;
           } else {
-             diffText = `${log.originalValue.note} ₱${log.originalValue.amount.toFixed(2)} → ₱${log.newValue.amount.toFixed(2)}`;
+            diffText = `${log.originalValue.note} ₱${log.originalValue.amount.toFixed(2)} → ₱${log.newValue.amount.toFixed(2)}`;
           }
           return `<div class="audit-item"><b>${typeLabel}</b> [${dateStr}]: ${diffText}</div>`;
         }).join("");
@@ -1073,7 +1088,7 @@ function render() {
     const date = new Date(exp.date);
     const icons = { survival: "🍔", stability: "🛡️", wants: "🎮", future: "🚀" };
     const categoryLabel = exp.category.toUpperCase();
-    
+
     li.innerHTML = `
       <div class="expense-info">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
@@ -1081,7 +1096,7 @@ function render() {
           <span style="font-weight: 500;">${exp.note}</span>
           <span class="category-badge">${categoryLabel}</span>
         </div>
-        <div style="font-size: 12px; color: #999;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        <div style="font-size: 12px; color: #999;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
       </div>
       <div class="expense-actions">
         <button onclick="editExpense(${idx})" style="background: #1976d2; color: white; border: none; padding: 6px 10px; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: 500;">✏️ Edit</button>
@@ -1104,17 +1119,17 @@ function deleteExpense(index) {
   if (confirm(`Delete: ${exp.note} - ₱${exp.amount.toFixed(2)}?`)) {
     // Refund the amount back to the parent category
     data.remaining[getParentCategory(exp.category)] += exp.amount;
-    
+
     if (!data.auditLog) data.auditLog = [];
     data.auditLog.push({
       action: "DELETE",
       timestamp: new Date().toISOString(),
       originalValue: { ...exp }
     });
-    
+
     // Remove expense
     data.expenses.splice(index, 1);
-    
+
     saveData(data);
     showMessage(`✓ Deleted expense: ${exp.note}`, "success");
     render();
@@ -1148,13 +1163,13 @@ function editExpense(index) {
   if (oldParent !== newParent) {
     // Refund from old category
     data.remaining[oldParent] += exp.amount;
-    
+
     // Check new category
     if (data.remaining[newParent] < newAmount) {
       data.remaining[oldParent] -= exp.amount; // Undo refund
       return showMessage(`Not enough in parent ${newParent} for ₱${newAmount.toFixed(2)}`, "error");
     }
-    
+
     // Deduct from new category
     data.remaining[newParent] -= newAmount;
   } else {
@@ -1187,7 +1202,7 @@ function editExpense(index) {
 function getPastPerformanceSummary() {
   const history = getCutoffHistory();
   if (history.length === 0) return null;
-  
+
   const lastCutoff = history[history.length - 1];
   return {
     lastSaved: lastCutoff.saved,
@@ -1211,7 +1226,7 @@ function exportData() {
   const rows = data.expenses.map(exp => {
     const date = new Date(exp.date);
     const dateStr = date.toLocaleDateString();
-    const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return [
       dateStr,
       timeStr,
@@ -1230,14 +1245,14 @@ function exportData() {
   // Add summary
   const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
   const spent = total - (data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future);
-  
+
   // Get past performance if available
   const past = getPastPerformanceSummary();
   let perfSummary = "";
   if (past) {
     perfSummary = `\n\n=== PAST PERFORMANCE ===\nTotal Cutoffs,${past.totalCutoffs}\nTotal Savings (All Cutoffs),₱${past.totalHistorySavings.toFixed(2)}\nAverage Savings/Cutoff,₱${past.avgSavings.toFixed(2)}\nLast Cutoff Saved,₱${past.lastSaved.toFixed(2)}`;
   }
-  
+
   const summary = `\n\n=== CURRENT CUTOFF SUMMARY ===\nIncome,${data.income.toFixed(2)}\nCutoff Start,${new Date(data.startDate).toLocaleDateString()}\nCutoff End,${new Date(data.endDate).toLocaleDateString()}\nTotal Budget,${total.toFixed(2)}\nTotal Spent,${spent.toFixed(2)}\nTotal Remaining,${(total - spent).toFixed(2)}\nSurvival Remaining,${data.remaining.survival.toFixed(2)}\nStability Remaining,${data.remaining.stability.toFixed(2)}\nWants Remaining,${data.remaining.wants.toFixed(2)}\nFuture Remaining,${data.remaining.future.toFixed(2)}`;
 
   const fullCSV = csvContent + summary + perfSummary;
@@ -1246,16 +1261,16 @@ function exportData() {
   const blob = new Blob([fullCSV], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
-  
+
   const endDate = new Date(data.endDate).toISOString().split("T")[0];
   link.setAttribute("href", url);
   link.setAttribute("download", `budget-${endDate}.csv`);
   link.style.visibility = "hidden";
-  
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   showMessage("✓ Data exported successfully", "success");
 }
 
@@ -1293,18 +1308,20 @@ function updateCategoryPreview() {
   const manualCat = document.getElementById('expenseCategory').value;
   const preview = document.getElementById('categoryPreview');
   const previewName = document.getElementById('previewCatName');
-  
+
   if (!preview || !previewName) return;
-  
+
   // Only show preview when auto-detect is active and note has content
   if (manualCat || !note) {
     preview.classList.remove('visible');
     return;
   }
-  
+
   const detected = smartDetectCategory(note);
   previewName.textContent = detected;
-  preview.classList.add('visible');
+
+  // Apply color class based on detected category
+  preview.className = 'category-preview visible ' + detected.toLowerCase();
 }
 
 // Phase 2: Input Friction Reduction
@@ -1328,7 +1345,7 @@ function initializeInputHandlers() {
   const categorySelect = document.getElementById("expenseCategory");
   const incomeInput = document.getElementById("incomeInput");
   const dateInput = document.getElementById("cutoffStartDate");
-  
+
   // Default date to today
   if (dateInput) {
     const now = new Date();
@@ -1337,10 +1354,10 @@ function initializeInputHandlers() {
     const dd = String(now.getDate()).padStart(2, '0');
     dateInput.value = `${yyyy}-${mm}-${dd}`;
   }
-  
+
   // Auto-focus on amount after page load
   amountInput.focus();
-  
+
   // Enter key to submit expense
   amountInput.addEventListener("keypress", e => {
     if (e.key === "Enter") {
@@ -1351,19 +1368,19 @@ function initializeInputHandlers() {
       }
     }
   });
-  
+
   noteInput.addEventListener("keypress", e => {
     if (e.key === "Enter") {
       addExpense();
     }
   });
-  
+
   // Save last category whenever it changes + hide preview
   categorySelect.addEventListener("change", () => {
     saveLastCategory();
     updateCategoryPreview();
   });
-  
+
   // Enter key on income input
   incomeInput.addEventListener("keypress", e => {
     if (e.key === "Enter") {

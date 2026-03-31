@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f1117">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,171 +16,176 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-<div id="offlineBanner">📡 Offline Mode Active</div>
+  <div id="offlineBanner">📡 Offline Mode Active</div>
 
-<!-- App Header -->
-<div class="app-header">
-  <div class="app-title">💰 Budget</div>
-  <div class="header-actions">
-    <button class="header-btn" onclick="exportData()" title="Export">📥</button>
-    <button class="header-btn" onclick="resetCutoff()" title="Reset">🔄</button>
-  </div>
-</div>
-
-<!-- Toast Alert -->
-<div id="alert"></div>
-
-<!-- Tab Content Area -->
-<div class="tab-content">
-
-  <!-- ═══ TAB 1: DASHBOARD ═══ -->
-  <div id="tabDashboard" class="tab-view active">
-    <div id="summary"></div>
-
-    <!-- Income section (always visible) -->
-    <div class="income-card">
-      <h3>💼 Add Income (1 cutoff = 15 days)</h3>
-      <div style="margin-bottom: 8px;">
-        <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Cutoff Start Date:</label>
-        <input type="date" id="cutoffStartDate" style="width:100%;">
-      </div>
-      <div class="input-group" style="margin-bottom:0;">
-        <input type="number" id="incomeInput" placeholder="Enter income (₱)" step="0.01" min="1">
-        <button onclick="addIncome()">Start</button>
-      </div>
+  <!-- App Header -->
+  <div class="app-header">
+    <div class="app-title">💰 Budget</div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="exportData()" title="Export">📥</button>
+      <button class="header-btn" onclick="resetCutoff()" title="Reset">🔄</button>
     </div>
   </div>
 
-  <!-- ═══ TAB 2: EXPENSES ═══ -->
-  <div id="tabExpenses" class="tab-view">
-    <div style="margin-bottom: 12px;">
-      <div class="card-title">📝 Expense List</div>
-    </div>
-    <div class="button-group">
-      <button onclick="resetCutoff()" class="danger" style="flex:1; font-size:12px;">Reset Cutoff</button>
-      <button onclick="exportData()" class="secondary" style="flex:1; font-size:12px;">📥 Export</button>
-    </div>
-    <ul id="expenseList"></ul>
-  </div>
+  <!-- Toast Alert -->
+  <div id="alert"></div>
 
-  <!-- ═══ TAB 3: HISTORY ═══ -->
-  <div id="tabHistory" class="tab-view">
-    <div style="margin-bottom: 12px;">
-      <div class="card-title">📊 Cutoff History</div>
-    </div>
-    <div id="historyList"></div>
-  </div>
-</div>
+  <!-- Tab Content Area -->
+  <div class="tab-content">
 
-<!-- Quick Add Expense (collapsible bottom panel) -->
-<div id="expenseInputSection">
-  <div class="quick-add-toggle" onclick="toggleQuickAdd()">
-    <h3>⚡ Quick Add</h3>
-    <span class="quick-add-chevron">▼</span>
-  </div>
-  <div class="quick-add-body">
-    <div id="categoryPreview" class="category-preview">
-      <span class="preview-label">Auto-detect →</span>
-      <span class="preview-cat" id="previewCatName">Misc</span>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <select id="expenseCategory" style="width:100%; margin-bottom:6px;">
-        <option value="">🔍 Auto-detect</option>
-        <option value="Food">🍔 Food</option>
-        <option value="Transpo">🚌 Transpo</option>
-        <option value="Needs">🛡️ Needs</option>
-        <option value="Wants">🎮 Wants</option>
-        <option value="Misc">📦 Misc</option>
-      </select>
-      <div class="quick-cats">
-        <button onclick="setQuickCategory('Food')" class="quick-cat-btn" style="background:rgba(251,146,60,0.2);color:#fb923c;">🍔 Food</button>
-        <button onclick="setQuickCategory('Transpo')" class="quick-cat-btn" style="background:rgba(74,158,255,0.2);color:#4a9eff;">🚌 Transpo</button>
-        <button onclick="setQuickCategory('Wants')" class="quick-cat-btn" style="background:rgba(167,139,250,0.2);color:#a78bfa;">🎮 Wants</button>
-        <button onclick="setQuickCategory('')" class="quick-cat-btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">🔄 Auto</button>
+    <!-- ═══ TAB 1: DASHBOARD ═══ -->
+    <div id="tabDashboard" class="tab-view active">
+      <div id="summary"></div>
+
+      <!-- Income section (always visible) -->
+      <div class="income-card">
+        <h3>💼 Add Income (1 cutoff = 15 days)</h3>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">When did you receive your salary?</label>
+          <input type="date" id="cutoffStartDate" style="width:100%;">
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <input type="number" id="incomeInput" placeholder="Enter income (₱)" step="0.01" min="1">
+          <button onclick="addIncome()">Start</button>
+        </div>
       </div>
     </div>
-    <div class="input-group" style="margin-bottom: 0;">
-      <input type="number" id="expenseAmount" placeholder="₱ Amount" step="0.01" min="0.01">
-      <input type="text" id="expenseNote" placeholder="What for?" oninput="updateCategoryPreview()">
-      <button onclick="addExpense()" style="font-weight:700;">+</button>
+
+    <!-- ═══ TAB 2: EXPENSES ═══ -->
+    <div id="tabExpenses" class="tab-view">
+      <div style="margin-bottom: 12px;">
+        <div class="card-title">📝 Expense List</div>
+      </div>
+      <div class="button-group">
+        <button onclick="resetCutoff()" class="danger" style="flex:1; font-size:12px;">Reset Cutoff</button>
+        <button onclick="exportData()" class="secondary" style="flex:1; font-size:12px;">📥 Export</button>
+      </div>
+      <ul id="expenseList"></ul>
+    </div>
+
+    <!-- ═══ TAB 3: HISTORY ═══ -->
+    <div id="tabHistory" class="tab-view">
+      <div style="margin-bottom: 12px;">
+        <div class="card-title">📊 Cutoff History</div>
+      </div>
+      <div id="historyList"></div>
     </div>
   </div>
-</div>
 
-<!-- Bottom Tab Bar -->
-<nav class="tab-bar">
-  <button class="tab-bar-item active" onclick="switchTab('Dashboard')">
-    <span class="tab-icon">💰</span>
-    Dashboard
-  </button>
-  <button class="tab-bar-item" onclick="switchTab('Expenses')">
-    <span class="tab-icon">📝</span>
-    Expenses
-  </button>
-  <button class="tab-bar-item" onclick="switchTab('History')">
-    <span class="tab-icon">📊</span>
-    History
-  </button>
-</nav>
+  <!-- Quick Add Expense (collapsible bottom panel) -->
+  <div id="expenseInputSection">
+    <div class="quick-add-toggle" onclick="toggleQuickAdd()">
+      <h3>⚡ Quick Add</h3>
+      <span class="quick-add-chevron">▼</span>
+    </div>
+    <div class="quick-add-body">
+      <div id="categoryPreview" class="category-preview">
+        <span class="preview-label">Auto-detect →</span>
+        <span class="preview-cat" id="previewCatName">Misc</span>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <select id="expenseCategory" style="width:100%; margin-bottom:6px;">
+          <option value="">🔍 Auto-detect</option>
+          <option value="Food">🍔 Food</option>
+          <option value="Transpo">🚌 Transpo</option>
+          <option value="Needs">🛡️ Needs</option>
+          <option value="Wants">🎮 Wants</option>
+          <option value="Misc">📦 Misc</option>
+        </select>
+        <div class="quick-cats">
+          <button onclick="setQuickCategory('Food')" class="quick-cat-btn"
+            style="background:rgba(251,146,60,0.2);color:#fb923c;">🍔 Food</button>
+          <button onclick="setQuickCategory('Transpo')" class="quick-cat-btn"
+            style="background:rgba(74,158,255,0.2);color:#4a9eff;">🚌 Transpo</button>
+          <button onclick="setQuickCategory('Wants')" class="quick-cat-btn"
+            style="background:rgba(167,139,250,0.2);color:#a78bfa;">🎮 Wants</button>
+          <button onclick="setQuickCategory('')" class="quick-cat-btn"
+            style="background:rgba(255,255,255,0.06);color:var(--text-muted);">🔄 Auto</button>
+        </div>
+      </div>
+      <div class="input-group" style="margin-bottom: 0;">
+        <input type="number" id="expenseAmount" placeholder="₱ Amount" step="0.01" min="0.01">
+        <input type="text" id="expenseNote" placeholder="What for?" oninput="updateCategoryPreview()">
+        <button onclick="addExpense()" style="font-weight:700;">+</button>
+      </div>
+    </div>
+  </div>
 
-<script>
-  // Override alert to show custom toast
-  const originalAlert = window.alert;
-  window.alert = function(msg) {
-    const alertDiv = document.getElementById("alert");
-    alertDiv.innerHTML = `<div class="alert">${msg}</div>`;
-    setTimeout(() => alertDiv.innerHTML = '', 3000);
-  };
+  <!-- Bottom Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-bar-item active" onclick="switchTab('Dashboard')">
+      <span class="tab-icon">💰</span>
+      Dashboard
+    </button>
+    <button class="tab-bar-item" onclick="switchTab('Expenses')">
+      <span class="tab-icon">📝</span>
+      Expenses
+    </button>
+    <button class="tab-bar-item" onclick="switchTab('History')">
+      <span class="tab-icon">📊</span>
+      History
+    </button>
+  </nav>
 
-  // Tab Switching
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.tab-bar-item').forEach(b => b.classList.remove('active'));
+  <script>
+    // Override alert to show custom toast
+    const originalAlert = window.alert;
+    window.alert = function (msg) {
+      const alertDiv = document.getElementById("alert");
+      alertDiv.innerHTML = `<div class="alert">${msg}</div>`;
+      setTimeout(() => alertDiv.innerHTML = '', 3000);
+    };
 
-    document.getElementById('tab' + tabName).classList.add('active');
-    
-    // Highlight the correct tab bar button
-    const tabIndex = { Dashboard: 0, Expenses: 1, History: 2 };
-    const buttons = document.querySelectorAll('.tab-bar-item');
-    if (buttons[tabIndex[tabName]]) buttons[tabIndex[tabName]].classList.add('active');
+    // Tab Switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.tab-bar-item').forEach(b => b.classList.remove('active'));
 
-    // Show/hide quick add based on tab
-    const inputSection = document.getElementById('expenseInputSection');
-    if ((tabName === 'Expenses' || tabName === 'Dashboard') && inputSection.classList.contains('show')) {
-      inputSection.style.display = 'block';
-    } else {
-      inputSection.style.display = 'none';
+      document.getElementById('tab' + tabName).classList.add('active');
+
+      // Highlight the correct tab bar button
+      const tabIndex = { Dashboard: 0, Expenses: 1, History: 2 };
+      const buttons = document.querySelectorAll('.tab-bar-item');
+      if (buttons[tabIndex[tabName]]) buttons[tabIndex[tabName]].classList.add('active');
+
+      // Show/hide quick add based on tab
+      const inputSection = document.getElementById('expenseInputSection');
+      if ((tabName === 'Expenses' || tabName === 'Dashboard') && inputSection.classList.contains('show')) {
+        inputSection.style.display = 'block';
+      } else {
+        inputSection.style.display = 'none';
+      }
+
+      // Render history when switching to that tab
+      if (tabName === 'History') {
+        renderHistory();
+      }
     }
 
-    // Render history when switching to that tab
-    if (tabName === 'History') {
-      renderHistory();
-    }
-  }
+    // Render history tab
+    function renderHistory() {
+      const historyList = document.getElementById('historyList');
+      const history = JSON.parse(localStorage.getItem('budget_app_history') || '[]');
 
-  // Render history tab
-  function renderHistory() {
-    const historyList = document.getElementById('historyList');
-    const history = JSON.parse(localStorage.getItem('budget_app_history') || '[]');
-
-    if (history.length === 0) {
-      historyList.innerHTML = `
+      if (history.length === 0) {
+        historyList.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📊</div>
           <p>No completed cutoffs yet.<br>Your finished cycles will appear here.</p>
         </div>
       `;
-      return;
-    }
+        return;
+      }
 
-    historyList.innerHTML = history.slice().reverse().map((c, i) => {
-      const spentPct = c.income > 0 ? Math.min((c.totalSpent / c.income) * 100, 100) : 0;
-      const startDate = new Date(c.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-      const endDate = new Date(c.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+      historyList.innerHTML = history.slice().reverse().map((c, i) => {
+        const spentPct = c.income > 0 ? Math.min((c.totalSpent / c.income) * 100, 100) : 0;
+        const startDate = new Date(c.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+        const endDate = new Date(c.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 
-      return `
+        return `
         <div class="history-card">
           <div class="history-date">📅 ${startDate} – ${endDate}</div>
           <div class="history-amounts">
@@ -194,9 +201,10 @@
           </div>
         </div>
       `;
-    }).join('');
-  }
-</script>
-<script src="app.js"></script>
+      }).join('');
+    }
+  </script>
+  <script src="app.js"></script>
 </body>
+
 </html>
