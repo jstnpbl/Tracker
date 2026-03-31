@@ -807,6 +807,115 @@ function createProgressBar(parentCat, remaining, budgeted, expenses) {
   `;
 }
 
+// ═══════════════════════════════════════════
+// MILESTONE 3: Simple Insight Engine
+// ═══════════════════════════════════════════
+
+// Insight Engine: Spending pace per category
+function calculateSpendingPace(data) {
+  const today = new Date();
+  const start = new Date(data.startDate);
+  start.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const daysPassed = Math.max(1, Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1);
+
+  const spent = {};
+  Object.keys(data.budgets).forEach(cat => {
+    spent[cat] = data.budgets[cat] - data.remaining[cat];
+  });
+
+  const pace = {};
+  Object.keys(spent).forEach(cat => {
+    pace[cat] = spent[cat] / daysPassed;
+  });
+
+  return { pace, spent, daysPassed };
+}
+
+// Insight Engine: Run-out date prediction
+function predictRunOut(data, paceData) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(data.endDate);
+  end.setHours(0, 0, 0, 0);
+
+  const daysLeft = Math.max(1, Math.floor((end - today) / (1000 * 60 * 60 * 24)));
+
+  const predictions = {};
+  Object.keys(data.remaining).forEach(cat => {
+    const dailySpend = paceData.pace[cat] || 0;
+
+    if (dailySpend === 0) {
+      predictions[cat] = null;
+      return;
+    }
+
+    const daysUntilEmpty = data.remaining[cat] / dailySpend;
+
+    predictions[cat] = {
+      daysUntilEmpty: Math.floor(daysUntilEmpty),
+      willRunOut: daysUntilEmpty < daysLeft,
+      dailySpend: dailySpend
+    };
+  });
+
+  return { predictions, daysLeft };
+}
+
+// Insight Engine: Generate human-readable insights
+function generateInsightEngine(data) {
+  if (!data.expenses || data.expenses.length === 0) return [];
+
+  const paceData = calculateSpendingPace(data);
+  const { predictions, daysLeft } = predictRunOut(data, paceData);
+  const catLabels = { survival: "Survival 🍔", stability: "Stability 🛡️", wants: "Wants 🎮", future: "Future 🚀" };
+
+  const insights = [];
+
+  Object.keys(predictions).forEach(cat => {
+    const pred = predictions[cat];
+    if (!pred) return;
+
+    const label = catLabels[cat] || cat;
+    const avg = pred.dailySpend.toFixed(2);
+    const remaining = data.remaining[cat].toFixed(2);
+
+    if (pred.willRunOut) {
+      if (pred.daysUntilEmpty <= 1) {
+        insights.push({
+          type: "danger",
+          icon: "🔴",
+          message: `${label} runs out TODAY at current pace (₱${avg}/day). Only ₱${remaining} left.`
+        });
+      } else if (pred.daysUntilEmpty <= 3) {
+        insights.push({
+          type: "danger",
+          icon: "🟠",
+          message: `${label} will run out in ${pred.daysUntilEmpty} days at ₱${avg}/day. Consider slowing down.`
+        });
+      } else {
+        insights.push({
+          type: "warning",
+          icon: "🟡",
+          message: `${label} may run out in ~${pred.daysUntilEmpty} days (${daysLeft} days left in cutoff). Avg: ₱${avg}/day.`
+        });
+      }
+    }
+  });
+
+  // Positive insight: if ALL categories are on track
+  if (insights.length === 0 && data.expenses.length >= 2) {
+    insights.push({
+      type: "success",
+      icon: "✅",
+      message: `All budgets on track! ${daysLeft} days remaining with healthy spending pace.`
+    });
+  }
+
+  return insights;
+}
+
 // Render UI
 function render() {
   const data = getData();
@@ -1064,6 +1173,20 @@ function render() {
         <div class="audit-log">
           <div class="audit-title">📋 Expense Audit Log</div>
           ${listHtml}
+        </div>
+      `;
+    })()}
+    ${(() => {
+      // Milestone 3: Insight Engine
+      const engineInsights = generateInsightEngine(data);
+      if (engineInsights.length === 0) return '';
+      return `
+        <div class="insights-box">
+          <div class="insights-title">🧠 Insight Engine</div>
+          ${engineInsights.map(ins => {
+            const typeClass = ins.type === 'danger' ? 'danger' : ins.type === 'success' ? 'success' : 'warning';
+            return `<div class="insight ${typeClass}">${ins.icon} ${ins.message}</div>`;
+          }).join('')}
         </div>
       `;
     })()}

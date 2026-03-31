@@ -835,6 +835,56 @@ input[type="date"] {
   border-bottom: none;
 }
 
+/* ── Insight Engine (Milestone 3) ── */
+.insights-box {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.insights-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insight {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-left: 3px solid transparent;
+}
+
+.insight:last-child {
+  margin-bottom: 0;
+}
+
+.insight.warning {
+  background: rgba(251, 191, 36, 0.08);
+  color: var(--accent-yellow);
+  border-left-color: var(--accent-yellow);
+}
+
+.insight.danger {
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--accent-red);
+  border-left-color: var(--accent-red);
+}
+
+.insight.success {
+  background: rgba(52, 211, 153, 0.08);
+  color: var(--accent-green);
+  border-left-color: var(--accent-green);
+}
+
 /* ── Warnings / Insights ── */
 .days-warning {
   background: rgba(251, 191, 36, 0.1);
