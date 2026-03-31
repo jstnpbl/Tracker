@@ -475,7 +475,7 @@ button.danger {
   letter-spacing: 0.5px;
 }
 
-/* ── Quick Add (Fixed Bottom) ── */
+/* ── Quick Add (Collapsible Bottom Panel) ── */
 #expenseInputSection {
   position: fixed;
   bottom: 0;
@@ -483,23 +483,82 @@ button.danger {
   right: 0;
   background: var(--bg-tab-bar);
   border-top: 1px solid var(--border-subtle);
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   max-width: 500px;
   margin: 0 auto;
   display: none;
   z-index: 100;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.25s ease;
 }
 #expenseInputSection.show {
   display: block;
 }
-#expenseInputSection h3 {
-  margin: 0 0 10px;
+
+/* Toggle bar - always visible when panel is shown */
+.quick-add-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.quick-add-toggle h3 {
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+}
+.quick-add-chevron {
+  font-size: 16px;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+}
+#expenseInputSection.collapsed .quick-add-chevron {
+  transform: rotate(180deg);
+}
+
+/* Collapsible body */
+.quick-add-body {
+  padding: 0 16px 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  max-height: 260px;
+  overflow: hidden;
+  transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+#expenseInputSection.collapsed .quick-add-body {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+}
+
+/* Category preview badge */
+.category-preview {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(74,158,255,0.08);
+  border: 1px solid rgba(74,158,255,0.15);
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.category-preview.visible {
+  display: flex;
+}
+.category-preview .preview-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.category-preview .preview-cat {
+  font-weight: 600;
+  color: var(--accent-blue);
 }
 
 /* ── Quick Category Chips ── */
@@ -520,6 +579,20 @@ button.danger {
 }
 .quick-cat-btn:active {
   transform: scale(0.93);
+}
+
+/* ── New Expense Highlight ── */
+@keyframes highlightNew {
+  0% { border-color: var(--accent-green); box-shadow: 0 0 12px rgba(52,211,153,0.3); }
+  100% { border-color: var(--border-subtle); box-shadow: none; }
+}
+#expenseList li.new-entry {
+  animation: highlightNew 1.5s ease forwards;
+}
+
+/* ── Date Input Fix ── */
+input[type="date"] {
+  color-scheme: dark;
 }
 
 /* ── History Cards ── */

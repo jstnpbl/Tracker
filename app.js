@@ -300,11 +300,12 @@ function archiveCurrentCutoff(data) {
   saveCutoffHistory(history);
 }
 
-// Initialize cutoff
-function createCutoff(income) {
-  const today = new Date();
-  const end = new Date();
-  end.setDate(today.getDate() + 15);
+// Initialize cutoff — accepts optional startDate
+function createCutoff(income, startDate) {
+  const start = startDate ? new Date(startDate) : new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 15);
 
   let survival, stability, wants, future;
 
@@ -324,7 +325,7 @@ function createCutoff(income) {
   const round2 = (val) => Math.round(val * 100) / 100;
 
   return {
-    startDate: today.toISOString(),
+    startDate: start.toISOString(),
     endDate: end.toISOString(),
     income,
     budgets: {
@@ -349,6 +350,13 @@ function addIncome() {
   const amount = parseFloat(document.getElementById("incomeInput").value);
   if (!amount || amount <= 0) return showMessage("Enter valid income amount", "error");
 
+  // Read optional cutoff start date
+  const dateInput = document.getElementById("cutoffStartDate");
+  let startDate = null;
+  if (dateInput && dateInput.value) {
+    startDate = dateInput.value; // YYYY-MM-DD string
+  }
+
   const existing = getData();
   if (existing) {
     const today = new Date();
@@ -362,10 +370,12 @@ function addIncome() {
     }
   }
 
-  const data = createCutoff(amount);
+  const data = createCutoff(amount, startDate);
   saveData(data);
   document.getElementById("incomeInput").value = "";
-  showMessage(`✓ New cutoff created with ₱${amount.toFixed(2)}`, "success");
+  if (dateInput) dateInput.value = "";
+  const startFormatted = new Date(data.startDate).toLocaleDateString();
+  showMessage(`✓ Cutoff started ${startFormatted} with ₱${amount.toFixed(2)}`, "success");
   document.getElementById("expenseAmount").focus();
   render();
 }
@@ -465,7 +475,6 @@ function addExpense() {
 
   if (data.remaining[parentBudget] < amount) {
     const available = data.remaining[parentBudget].toFixed(2);
-    // Explicitly fallback mapping UI to explain blocking bounds
     const label = parentBudget !== category ? `${parentBudget} (detected ${category})` : parentBudget;
     return showMessage(`Not enough in ${label}. Available: ₱${available}`, "error");
   }
@@ -482,10 +491,26 @@ function addExpense() {
   saveData(data);
   document.getElementById("expenseAmount").value = "";
   document.getElementById("expenseNote").value = "";
-  // Keep category for next expense (don't clear)
+  // Hide category preview
+  const preview = document.getElementById('categoryPreview');
+  if (preview) preview.classList.remove('visible');
+  
   showMessage(`✓ Expense added to ${category}`, "success");
-  document.getElementById("expenseAmount").focus();
+  
+  // Auto-collapse Quick Add panel so user can see expenses
+  const panel = document.getElementById('expenseInputSection');
+  if (panel) panel.classList.add('collapsed');
+  
   render();
+  
+  // Scroll to newest expense and highlight it
+  setTimeout(() => {
+    const list = document.getElementById('expenseList');
+    if (list && list.lastElementChild) {
+      list.lastElementChild.classList.add('new-entry');
+      list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 50);
 }
 
 // Safe daily spend
@@ -1238,7 +1263,48 @@ function exportData() {
 function setQuickCategory(cat) {
   document.getElementById("expenseCategory").value = cat;
   if (cat) saveLastCategory();
+  // Update preview to reflect manual override
+  const preview = document.getElementById('categoryPreview');
+  if (preview) {
+    if (cat) {
+      preview.classList.remove('visible');
+    } else {
+      updateCategoryPreview();
+    }
+  }
   document.getElementById("expenseAmount").focus();
+}
+
+// Toggle Quick Add panel collapse
+function toggleQuickAdd() {
+  const panel = document.getElementById('expenseInputSection');
+  if (panel) {
+    panel.classList.toggle('collapsed');
+    // Focus amount input when expanding
+    if (!panel.classList.contains('collapsed')) {
+      setTimeout(() => document.getElementById('expenseAmount').focus(), 260);
+    }
+  }
+}
+
+// Real-time category preview as user types
+function updateCategoryPreview() {
+  const note = document.getElementById('expenseNote').value.trim();
+  const manualCat = document.getElementById('expenseCategory').value;
+  const preview = document.getElementById('categoryPreview');
+  const previewName = document.getElementById('previewCatName');
+  
+  if (!preview || !previewName) return;
+  
+  // Only show preview when auto-detect is active and note has content
+  if (manualCat || !note) {
+    preview.classList.remove('visible');
+    return;
+  }
+  
+  const detected = smartDetectCategory(note);
+  previewName.textContent = detected;
+  preview.classList.add('visible');
 }
 
 // Phase 2: Input Friction Reduction
@@ -1261,6 +1327,16 @@ function initializeInputHandlers() {
   const noteInput = document.getElementById("expenseNote");
   const categorySelect = document.getElementById("expenseCategory");
   const incomeInput = document.getElementById("incomeInput");
+  const dateInput = document.getElementById("cutoffStartDate");
+  
+  // Default date to today
+  if (dateInput) {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+  }
   
   // Auto-focus on amount after page load
   amountInput.focus();
@@ -1282,8 +1358,11 @@ function initializeInputHandlers() {
     }
   });
   
-  // Save last category whenever it changes
-  categorySelect.addEventListener("change", saveLastCategory);
+  // Save last category whenever it changes + hide preview
+  categorySelect.addEventListener("change", () => {
+    saveLastCategory();
+    updateCategoryPreview();
+  });
   
   // Enter key on income input
   incomeInput.addEventListener("keypress", e => {
