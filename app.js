@@ -370,29 +370,69 @@ function addIncome() {
   render();
 }
 
+// Helper: Get Parent Category
+function getParentCategory(catName) {
+  const parentMap = {
+    "Food": "survival", "Transpo": "survival",
+    "Needs": "stability", "Wants": "wants", "Misc": "future",
+    "survival": "survival", "stability": "stability", "wants": "wants", "future": "future"
+  };
+  return parentMap[catName] || "future";
+}
+
+// Helper: Levenshtein distance for fuzzy matching offline
+function levenshteinCost(a, b) {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const m = [];
+  for (let i = 0; i <= b.length; i++) m[i] = [i];
+  for (let j = 0; j <= a.length; j++) m[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      m[i][j] = b.charAt(i - 1) == a.charAt(j - 1) ? m[i - 1][j - 1] : Math.min(
+        m[i - 1][j - 1] + 1,
+        m[i][j - 1] + 1,
+        m[i - 1][j] + 1
+      );
+    }
+  }
+  return m[b.length][a.length];
+}
+
 // Category detection
-function detectCategory(note) {
+function smartDetectCategory(note) {
   note = note.toLowerCase();
 
   const rules = {
-    survival: [
-      "jollibee", "mcdo", "burger", "pizza", "rice", "food", "eat", "lunch", "breakfast", "dinner",
-      "fare", "jeep", "bus", "taxi", "grab", "transport", "gas", "fuel"
-    ],
-    stability: ["hospital", "medicine", "doctor", "health", "insurance"],
-    wants: [
-      "coffee", "milktea", "boba", "game", "gaming", "skin", "game pass",
-      "movie", "netflix", "spotify", "music", "entertainment", "shopping"
-    ]
+    Food: ["karinderya", "fast food", "eatery"],
+    Transpo: ["pamasahe", "fare", "jeep", "sasakyan", "bus", "taxi", "grab", "uber", "oil", "fuel"],
+    Wants: ["comshop", "nesneth", "laro", "dates", "hangout"],
+    Needs: ["self care", "personal food", "medicine", "utilities", "hygiene", "cleaning"],
+    Misc: ["gift", "stationery", "other", "random", "purchase"]
   };
 
+  // Exact substring match
   for (let cat in rules) {
-    if (rules[cat].some(word => note.includes(word))) {
+    if (rules[cat].some(kw => note.includes(kw.toLowerCase()))) {
       return cat;
     }
   }
 
-  return "wants";
+  // Fuzzy match (distance <= 2)
+  const words = note.split(/\s+/);
+  for (let cat in rules) {
+    for (let kw of rules[cat]) {
+      const kwLower = kw.toLowerCase();
+      if (kwLower.includes(' ')) continue; // strict exact-only for phrases
+      for (let word of words) {
+        if (word.length >= 4 && levenshteinCost(word, kwLower) <= 2) {
+          return cat;
+        }
+      }
+    }
+  }
+
+  return "Misc";
 }
 
 // Add expense
@@ -418,15 +458,19 @@ function addExpense() {
 
   // Auto-detect if not overridden
   if (!category) {
-    category = detectCategory(note);
+    category = smartDetectCategory(note);
   }
 
-  if (data.remaining[category] < amount) {
-    const available = data.remaining[category].toFixed(2);
-    return showMessage(`Not enough in ${category}. Available: ₱${available}`, "error");
+  const parentBudget = getParentCategory(category);
+
+  if (data.remaining[parentBudget] < amount) {
+    const available = data.remaining[parentBudget].toFixed(2);
+    // Explicitly fallback mapping UI to explain blocking bounds
+    const label = parentBudget !== category ? `${parentBudget} (detected ${category})` : parentBudget;
+    return showMessage(`Not enough in ${label}. Available: ₱${available}`, "error");
   }
 
-  data.remaining[category] -= amount;
+  data.remaining[parentBudget] -= amount;
 
   data.expenses.push({
     amount,
@@ -684,19 +728,36 @@ function generateSmartWarnings(data) {
 }
 
 // Helper: Create progress bar HTML
-function createProgressBar(category, remaining, budgeted) {
+function createProgressBar(parentCat, remaining, budgeted, expenses) {
   const spent = budgeted - remaining;
   const percentage = budgeted > 0 ? (spent / budgeted) * 100 : 0;
   const color = getProgressColor(spent, budgeted);
   const icons = { survival: "🍔", stability: "🛡️", wants: "🎮", future: "🚀" };
   const widthPct = Math.min(percentage, 100);
-  
+
+  // Summarize sub-categories for this parent
+  const subCatTotals = {};
+  for(let exp of expenses) {
+     const pCat = getParentCategory(exp.category);
+     if (pCat === parentCat || (exp.parentBudget && exp.parentBudget === parentCat)) {
+         subCatTotals[exp.category] = (subCatTotals[exp.category] || 0) + exp.amount;
+     }
+  }
+
+  // Format subcat text e.g. "Food: ₱100 | Transpo: ₱50"
+  const subcatHtml = Object.keys(subCatTotals).length > 0
+      ? Object.entries(subCatTotals).map(([k,v]) => `${k}: ₱${v.toFixed(2)}`).join(" | ")
+      : "No expenses";
+
   return `
     <div class="budget-item">
       <div class="budget-header">
         <div class="budget-label">
-          <span>${icons[category]}</span>
-          <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+          <span>${icons[parentCat]}</span>
+          <span style="display:flex; flex-direction:column;">
+             <span>${parentCat.charAt(0).toUpperCase() + parentCat.slice(1)}</span>
+             <span style="font-size: 10px; color:#777; font-weight:normal;">${subcatHtml}</span>
+          </span>
         </div>
         <div>
           <span class="budget-amount">₱${remaining.toFixed(2)}</span>
@@ -782,10 +843,10 @@ function render() {
   }
 
   const progressBars = `
-    ${createProgressBar("survival", data.remaining.survival, data.budgets.survival)}
-    ${createProgressBar("stability", data.remaining.stability, data.budgets.stability)}
-    ${createProgressBar("wants", data.remaining.wants, data.budgets.wants)}
-    ${createProgressBar("future", data.remaining.future, data.budgets.future)}
+    ${createProgressBar("survival", data.remaining.survival, data.budgets.survival, data.expenses)}
+    ${createProgressBar("stability", data.remaining.stability, data.budgets.stability, data.expenses)}
+    ${createProgressBar("wants", data.remaining.wants, data.budgets.wants, data.expenses)}
+    ${createProgressBar("future", data.remaining.future, data.budgets.future, data.expenses)}
   `;
   
   // Spending pace info
@@ -1006,8 +1067,8 @@ function deleteExpense(index) {
   if (!exp) return showMessage("Expense not found", "error");
 
   if (confirm(`Delete: ${exp.note} - ₱${exp.amount.toFixed(2)}?`)) {
-    // Refund the amount back to the category
-    data.remaining[exp.category] += exp.amount;
+    // Refund the amount back to the parent category
+    data.remaining[getParentCategory(exp.category)] += exp.amount;
     
     if (!data.auditLog) data.auditLog = [];
     data.auditLog.push({
@@ -1040,32 +1101,33 @@ function editExpense(index) {
   const newNote = prompt(`Edit note (current: ${exp.note}):`, exp.note);
   if (newNote === null || !newNote.trim()) return;
 
-  const newCategory = prompt(`Edit category (current: ${exp.category}). Enter: survival, stability, wants, or future:`, exp.category);
-  if (newCategory === null || !["survival", "stability", "wants", "future"].includes(newCategory)) return;
+  const newCategory = prompt(`Edit category (current: ${exp.category}). Enter: Food, Transpo, Wants, Needs, or Misc:`, exp.category);
+  if (newCategory === null || !["Food", "Transpo", "Needs", "Wants", "Misc", "survival", "stability", "wants", "future"].includes(newCategory)) return;
 
   // Calculate difference
   const amountDiff = newAmount - exp.amount;
-  const categoryDiff = newCategory !== exp.category;
+  const oldParent = getParentCategory(exp.category);
+  const newParent = getParentCategory(newCategory);
 
   // Check if new category has enough budget for the new amount
-  if (categoryDiff) {
+  if (oldParent !== newParent) {
     // Refund from old category
-    data.remaining[exp.category] += exp.amount;
+    data.remaining[oldParent] += exp.amount;
     
     // Check new category
-    if (data.remaining[newCategory] < newAmount) {
-      data.remaining[exp.category] -= exp.amount; // Undo refund
-      return showMessage(`Not enough in ${newCategory} for ₱${newAmount.toFixed(2)}`, "error");
+    if (data.remaining[newParent] < newAmount) {
+      data.remaining[oldParent] -= exp.amount; // Undo refund
+      return showMessage(`Not enough in parent ${newParent} for ₱${newAmount.toFixed(2)}`, "error");
     }
     
     // Deduct from new category
-    data.remaining[newCategory] -= newAmount;
+    data.remaining[newParent] -= newAmount;
   } else {
-    // Same category, check amount difference
-    if (amountDiff > 0 && data.remaining[exp.category] < amountDiff) {
+    // Same parent category, check amount difference
+    if (amountDiff > 0 && data.remaining[oldParent] < amountDiff) {
       return showMessage(`Not enough budget for additional ₱${amountDiff.toFixed(2)}`, "error");
     }
-    data.remaining[exp.category] -= amountDiff;
+    data.remaining[oldParent] -= amountDiff;
   }
 
   // Update expense
