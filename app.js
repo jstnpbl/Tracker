@@ -1,13 +1,26 @@
 const STORAGE_KEY = "budget_app";
 const STORAGE_HISTORY_KEY = "budget_app_history";
 
+// ── Milestone 4A: Salary Calculator UI State ──────────────────────────────
+// In-memory only — never written to localStorage
+let salaryState = null;
+let salaryInputState = {
+  dailyRate: '', daysWorked: '', absences: '0', lateMinutes: '0', undertimeMinutes: '0'
+};
+
 // Utility: Show message
+let _toastTimer = null;
 function showMessage(msg, type = "error") {
   const alertDiv = document.getElementById("alert");
-  const className = type === "error" ? "alert" : type === "success" ? "alert success" : "alert";
+  const className =
+    type === "success" ? "alert success" :
+    type === "warning" ? "alert warning" :
+    "alert";
+  // Clear any pending auto-dismiss to prevent toast overlap
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
   alertDiv.innerHTML = `<div class="${className}">${msg}</div>`;
   if (type !== "error") {
-    setTimeout(() => alertDiv.innerHTML = '', 3000);
+    _toastTimer = setTimeout(() => { alertDiv.innerHTML = ''; _toastTimer = null; }, 3000);
   }
 }
 
@@ -286,6 +299,16 @@ function archiveCurrentCutoff(data) {
   const total = data.budgets.survival + data.budgets.stability + data.budgets.wants + data.budgets.future;
   const spent = total - (data.remaining.survival + data.remaining.stability + data.remaining.wants + data.remaining.future);
 
+  // Milestone 9: Cutoff performance badge (archive moment only)
+  const streak = calculateStreakStats(data, new Date());
+  let badge = null;
+  if (streak && streak.daysElapsed > 0) {
+    const pct = (streak.daysUnderLimit / streak.daysElapsed) * 100;
+    if (pct >= 80) badge = "Disciplined";
+    else if (pct >= 50) badge = "Steady";
+    else badge = "Needs Work";
+  }
+
   history.push({
     startDate: data.startDate,
     endDate: data.endDate,
@@ -294,6 +317,7 @@ function archiveCurrentCutoff(data) {
     totalSpent: spent,
     saved: total - spent,
     expenses: data.expenses,
+    badge,
     timestamp: new Date().toISOString()
   });
 
@@ -551,6 +575,83 @@ function getDaysRemaining(endDate) {
   let daysLeft = Math.floor((end - today) / (1000 * 60 * 60 * 24));
   // If we're past midnight on end date, could be negative, show 0
   return Math.max(0, daysLeft);
+}
+
+// ═══════════════════════════════════════════
+// MILESTONE 9: Light Gamification (Streaks)
+// Logic only — derived from existing expenses
+// No new storage keys
+// ═══════════════════════════════════════════
+function calculateStreakStats(data, asOfDate = new Date()) {
+  if (!data) return null;
+
+  const dayMs = 1000 * 60 * 60 * 24;
+  const start = new Date(data.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(data.endDate);
+  end.setHours(0, 0, 0, 0);
+
+  const asOf = new Date(asOfDate);
+  asOf.setHours(0, 0, 0, 0);
+  if (asOf < start) return null;
+
+  const windowEnd = new Date(Math.min(asOf.getTime(), end.getTime()));
+  const daysElapsed = Math.floor((windowEnd - start) / dayMs) + 1;
+  if (daysElapsed <= 0) return null;
+
+  // Spec: compare each day's Survival spend against getSafeDaily(data)
+  const safeDaily = getSafeDaily(data);
+
+  // Group expenses by local calendar day
+  const byDay = {};
+  const expenses = Array.isArray(data.expenses) ? data.expenses : [];
+  for (const exp of expenses) {
+    if (!exp || !exp.date) continue;
+    const d = new Date(exp.date);
+    if (isNaN(d.getTime())) continue;
+    d.setHours(0, 0, 0, 0);
+    if (d < start || d > windowEnd) continue;
+
+    const key = d.toISOString().slice(0, 10);
+    if (!byDay[key]) byDay[key] = { totalExpenses: 0, survivalSpend: 0 };
+    byDay[key].totalExpenses += 1;
+    if (getParentCategory(exp.category) === "survival") {
+      byDay[key].survivalSpend += exp.amount || 0;
+    }
+  }
+
+  let bestStreak = 0;
+  let running = 0;
+  let daysUnderLimit = 0;
+
+  for (let i = 0; i < daysElapsed; i++) {
+    const day = new Date(start.getTime() + i * dayMs);
+    const key = day.toISOString().slice(0, 10);
+    const entry = byDay[key] || { totalExpenses: 0, survivalSpend: 0 };
+
+    // Spec: rest day counts (zero expenses = good day)
+    const isGoodDay = entry.totalExpenses === 0 || entry.survivalSpend <= safeDaily;
+    if (isGoodDay) {
+      daysUnderLimit += 1;
+      running += 1;
+      bestStreak = Math.max(bestStreak, running);
+    } else {
+      running = 0;
+    }
+  }
+
+  // Current streak: consecutive good days ending today (asOf)
+  let currentStreak = 0;
+  for (let i = daysElapsed - 1; i >= 0; i--) {
+    const day = new Date(start.getTime() + i * dayMs);
+    const key = day.toISOString().slice(0, 10);
+    const entry = byDay[key] || { totalExpenses: 0, survivalSpend: 0 };
+    const isGoodDay = entry.totalExpenses === 0 || entry.survivalSpend <= safeDaily;
+    if (!isGoodDay) break;
+    currentStreak += 1;
+  }
+
+  return { safeDaily, daysElapsed, daysUnderLimit, currentStreak, bestStreak };
 }
 
 // Reset cutoff (allow fresh start)
@@ -1196,6 +1297,30 @@ function render() {
         </div>
       `;
     })()}
+    ${(() => {
+      // Milestone 9: Streak UI Card (Dashboard, below insight engine)
+      const streak = calculateStreakStats(data, new Date());
+      if (!streak || streak.daysElapsed <= 0) return '';
+      return `
+        <div class="streak-card">
+          <div class="streak-title">🔥 Spending Streak</div>
+          <div class="streak-grid">
+            <div class="streak-item">
+              <div class="streak-label">Current</div>
+              <div class="streak-value">${streak.currentStreak}</div>
+            </div>
+            <div class="streak-item">
+              <div class="streak-label">Best (this cutoff)</div>
+              <div class="streak-value">${streak.bestStreak}</div>
+            </div>
+            <div class="streak-item">
+              <div class="streak-label">Days under limit</div>
+              <div class="streak-value">${streak.daysUnderLimit}/${streak.daysElapsed}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    })()}
   `;
 
   // Trigger animations
@@ -1265,7 +1390,13 @@ function deleteExpense(index) {
   }
 }
 
-// Edit expense
+// ═══════════════════════════════════════════
+// MILESTONE 5: Edit Expense — Bottom Sheet Modal
+// ═══════════════════════════════════════════
+
+let currentEditIndex = null;
+
+// Open the edit modal and pre-fill fields with current expense values
 function editExpense(index) {
   const data = getData();
   if (!data) return showMessage("No data to edit", "error");
@@ -1273,22 +1404,64 @@ function editExpense(index) {
   const exp = data.expenses[index];
   if (!exp) return showMessage("Expense not found", "error");
 
-  // Get new values from user
-  const newAmount = parseFloat(prompt(`Edit amount (current: ₱${exp.amount.toFixed(2)}):`, exp.amount));
-  if (newAmount === null || isNaN(newAmount) || newAmount <= 0) return;
+  currentEditIndex = index;
 
-  const newNote = prompt(`Edit note (current: ${exp.note}):`, exp.note);
-  if (newNote === null || !newNote.trim()) return;
+  // Pre-fill fields
+  document.getElementById('editAmount').value = exp.amount;
+  document.getElementById('editNote').value = exp.note;
+  document.getElementById('editCategory').value = exp.category;
 
-  const newCategory = prompt(`Edit category (current: ${exp.category}). Enter: Food, Transpo, Wants, Needs, or Misc:`, exp.category);
-  if (newCategory === null || !["Food", "Transpo", "Needs", "Wants", "Misc", "survival", "stability", "wants", "future"].includes(newCategory)) return;
+  openEditModal();
+}
 
-  // Calculate difference
+// Show the bottom sheet + overlay
+function openEditModal() {
+  document.getElementById('editOverlay').classList.remove('hidden');
+  document.getElementById('editModal').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+
+  // Autofocus on amount field after animation starts
+  setTimeout(() => document.getElementById('editAmount').focus(), 300);
+}
+
+// Close the bottom sheet + overlay
+function closeEditModal() {
+  document.getElementById('editModal').classList.add('hidden');
+  document.getElementById('editOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  currentEditIndex = null;
+}
+
+// Save: validate inputs then apply SAME budget logic as before
+function saveEditExpense() {
+  if (currentEditIndex === null) return;
+
+  const newAmount = parseFloat(document.getElementById('editAmount').value);
+  const newNote = document.getElementById('editNote').value.trim();
+  const newCategory = document.getElementById('editCategory').value;
+
+  // Validation
+  if (!newAmount || isNaN(newAmount) || newAmount <= 0) {
+    return showMessage('Enter a valid amount', 'error');
+  }
+  if (!newNote) {
+    return showMessage('Enter a description', 'error');
+  }
+  if (!["Food", "Transpo", "Needs", "Wants", "Misc"].includes(newCategory)) {
+    return showMessage('Select a valid category', 'error');
+  }
+
+  const data = getData();
+  if (!data) return showMessage("No data to edit", "error");
+
+  const exp = data.expenses[currentEditIndex];
+  if (!exp) return showMessage("Expense not found", "error");
+
+  // ── Budget math (identical to original) ──
   const amountDiff = newAmount - exp.amount;
   const oldParent = getParentCategory(exp.category);
   const newParent = getParentCategory(newCategory);
 
-  // Check if new category has enough budget for the new amount
   if (oldParent !== newParent) {
     // Refund from old category
     data.remaining[oldParent] += exp.amount;
@@ -1296,7 +1469,7 @@ function editExpense(index) {
     // Check new category
     if (data.remaining[newParent] < newAmount) {
       data.remaining[oldParent] -= exp.amount; // Undo refund
-      return showMessage(`Not enough in parent ${newParent} for ₱${newAmount.toFixed(2)}`, "error");
+      return showMessage(`Not enough in ${newParent} for ₱${newAmount.toFixed(2)}`, 'error');
     }
 
     // Deduct from new category
@@ -1304,26 +1477,28 @@ function editExpense(index) {
   } else {
     // Same parent category, check amount difference
     if (amountDiff > 0 && data.remaining[oldParent] < amountDiff) {
-      return showMessage(`Not enough budget for additional ₱${amountDiff.toFixed(2)}`, "error");
+      return showMessage(`Not enough budget for additional ₱${amountDiff.toFixed(2)}`, 'error');
     }
     data.remaining[oldParent] -= amountDiff;
   }
 
-  // Update expense
+  // Audit log
   if (!data.auditLog) data.auditLog = [];
   data.auditLog.push({
     action: "EDIT",
     timestamp: new Date().toISOString(),
     originalValue: { amount: exp.amount, note: exp.note, category: exp.category },
-    newValue: { amount: newAmount, note: newNote.trim(), category: newCategory }
+    newValue: { amount: newAmount, note: newNote, category: newCategory }
   });
 
+  // Update expense
   exp.amount = newAmount;
-  exp.note = newNote.trim();
+  exp.note = newNote;
   exp.category = newCategory;
 
   saveData(data);
-  showMessage(`✓ Updated expense: ${exp.note}`, "success");
+  closeEditModal();
+  showMessage(`✓ Expense updated: ${exp.note}`, 'success');
   render();
 }
 
@@ -1517,6 +1692,267 @@ function initializeInputHandlers() {
     }
   });
 }
+
+// ═══════════════════════════════════════════
+// MILESTONE 4A: Cutoff Salary Calculator
+// Pure function — no DOM, no localStorage
+// ═══════════════════════════════════════════
+
+function calculateCutoffSalary({
+  dailyRate,
+  daysWorked,
+  absences = 0,
+  lateMinutes = 0,
+  undertimeMinutes = 0
+}) {
+  // 1. Base pay
+  const basePay = dailyRate * daysWorked;
+
+  // 2. Absence deduction
+  const absenceDeduction = absences * dailyRate;
+
+  // 3. Minute-based deduction (8hr workday = 480 min)
+  const minutesPerDay = 8 * 60;
+  const perMinuteRate = dailyRate / minutesPerDay;
+  const totalLateMinutes = lateMinutes + undertimeMinutes;
+  const lateDeduction = Math.round(totalLateMinutes * perMinuteRate * 100) / 100;
+
+  // 4. Gross estimate
+  const gross = basePay - absenceDeduction - lateDeduction;
+
+  // 5. Safety clamp (no negatives)
+  const takeHome = Math.max(0, Math.round(gross * 100) / 100);
+
+  return {
+    basePay: Math.round(basePay * 100) / 100,
+    absenceDeduction: Math.round(absenceDeduction * 100) / 100,
+    lateDeduction,
+    gross: Math.round(gross * 100) / 100,
+    takeHome
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MILESTONE 4A: Salary Calculator UI
+// renderSalaryTab  — builds the salary tab DOM from scratch
+// computeSalary    — reads form, runs calculateCutoffSalary, re-renders
+// useAsCutoffIncome — pushes takeHome into income input, switches to Dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderSalaryTab() {
+  const tab = document.getElementById('tabSalary');
+  if (!tab) return;
+
+  // ── Result card (only shown after first calculation) ──
+  const hasResult = salaryState && salaryState.takeHome > 0;
+  const resultHtml = salaryState ? `
+    <div class="salary-result-card">
+      <div class="salary-result-title">💵 Salary Breakdown</div>
+
+      <div class="salary-breakdown-row">
+        <span class="srow-label">Base Pay</span>
+        <span class="srow-value">₱${salaryState.basePay.toFixed(2)}</span>
+      </div>
+      <div class="salary-breakdown-row deduction">
+        <span class="srow-label">Absence Deduction</span>
+        <span class="srow-value">−₱${salaryState.absenceDeduction.toFixed(2)}</span>
+      </div>
+      <div class="salary-breakdown-row deduction">
+        <span class="srow-label">Late / Undertime</span>
+        <span class="srow-value">−₱${salaryState.lateDeduction.toFixed(2)}</span>
+      </div>
+      <div class="salary-breakdown-row gross">
+        <span class="srow-label">Gross Pay</span>
+        <span class="srow-value">₱${salaryState.gross.toFixed(2)}</span>
+      </div>
+
+      <div class="salary-takehome">
+        <div class="salary-takehome-label">Take Home Pay</div>
+        <div class="salary-takehome-amount">₱${salaryState.takeHome.toFixed(2)}</div>
+      </div>
+
+      <button id="btnUseAsCutoff" onclick="useAsCutoffIncome()" class="salary-use-btn"${hasResult ? '' : ' disabled'}>
+        💼 Use as Cutoff Income
+      </button>
+    </div>
+  ` : '';
+
+  // ── Full tab HTML ──
+  tab.innerHTML = `
+    <div class="salary-form-card">
+      <div class="card-title">💼 Cutoff Salary Calculator</div>
+      <p class="salary-subtitle">Estimate take-home pay for this cutoff period.</p>
+
+      <div class="salary-field">
+        <label class="salary-label" for="salaryDailyRate">Daily Rate (₱)</label>
+        <input type="number" id="salaryDailyRate"
+          placeholder="e.g. 500" step="0.01" min="0"
+          value="${salaryInputState.dailyRate}">
+      </div>
+
+      <div class="salary-field">
+        <label class="salary-label" for="salaryDaysWorked">Days Worked</label>
+        <input type="number" id="salaryDaysWorked"
+          placeholder="e.g. 10" min="0"
+          value="${salaryInputState.daysWorked}">
+      </div>
+
+      <div class="salary-row-inputs">
+        <div class="salary-field">
+          <label class="salary-label" for="salaryAbsences">Absences</label>
+          <input type="number" id="salaryAbsences"
+            placeholder="0" min="0"
+            value="${salaryInputState.absences}">
+        </div>
+        <div class="salary-field">
+          <label class="salary-label" for="salaryLateMinutes">Late (min)</label>
+          <input type="number" id="salaryLateMinutes"
+            placeholder="0" min="0"
+            value="${salaryInputState.lateMinutes}">
+        </div>
+        <div class="salary-field">
+          <label class="salary-label" for="salaryUndertimeMinutes">Undertime (min)</label>
+          <input type="number" id="salaryUndertimeMinutes"
+            placeholder="0" min="0"
+            value="${salaryInputState.undertimeMinutes}">
+        </div>
+      </div>
+
+      <button id="btnComputeSalary" onclick="computeSalary()" class="salary-calc-btn">Calculate Salary</button>
+    </div>
+
+    ${resultHtml}
+  `;
+}
+
+// Read form → validate → compute → re-render
+function computeSalary() {
+  const dailyRateEl = document.getElementById('salaryDailyRate');
+  const daysWorkedEl = document.getElementById('salaryDaysWorked');
+  const absencesEl = document.getElementById('salaryAbsences');
+  const lateMinEl = document.getElementById('salaryLateMinutes');
+  const undertimeEl = document.getElementById('salaryUndertimeMinutes');
+
+  const dailyRate = parseFloat(dailyRateEl.value);
+  const daysWorked = parseFloat(daysWorkedEl.value);
+  const absences = parseFloat(absencesEl.value) || 0;
+  const lateMinutes = parseFloat(lateMinEl.value) || 0;
+  const undertimeMinutes = parseFloat(undertimeEl.value) || 0;
+
+  // Persist inputs so re-render keeps values
+  salaryInputState = {
+    dailyRate: dailyRateEl.value,
+    daysWorked: daysWorkedEl.value,
+    absences: absencesEl.value,
+    lateMinutes: lateMinEl.value,
+    undertimeMinutes: undertimeEl.value
+  };
+
+  if (!dailyRate || dailyRate <= 0) return showMessage('Enter a valid daily rate', 'error');
+  if (isNaN(daysWorked) || daysWorked < 0) return showMessage('Enter valid days worked', 'error');
+
+  salaryState = calculateCutoffSalary({ dailyRate, daysWorked, absences, lateMinutes, undertimeMinutes });
+  renderSalaryTab();
+  showMessage('✓ Salary calculated', 'success');
+}
+
+// ── Milestone 4B: Polished salary → cutoff integration ──────────────────
+function useAsCutoffIncome() {
+  // Safety guard: no result computed yet, null, or zero take-home
+  if (!salaryState || !salaryState.takeHome) {
+    return;
+  }
+
+  const existingCutoff = getData();
+
+  // Case B: Active cutoff exists — ask for confirmation
+  if (existingCutoff) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(existingCutoff.endDate);
+    end.setHours(0, 0, 0, 0);
+    const stillActive = today <= end;
+
+    if (stillActive) {
+      if (!confirm('An active cutoff already exists. This will overwrite it. Continue?')) {
+        return; // User cancelled — do nothing
+      }
+      // Show warning toast first so user sees it before the tab switches
+      showMessage('⚠️ Previous cutoff will be replaced', 'warning');
+      setTimeout(function() {
+        applySalaryToIncome('✓ Salary applied successfully');
+      }, 600);
+      return;
+    }
+  }
+
+  // Case A: No active cutoff — apply directly
+  applySalaryToIncome('✓ Salary applied. You can now start your cutoff.');
+}
+
+// Internal helper: performs the actual fill + switch + feedback
+// msg — optional override for the success toast
+function applySalaryToIncome(msg) {
+  const incomeInput = document.getElementById('incomeInput');
+  if (incomeInput) {
+    incomeInput.value = salaryState.takeHome.toFixed(2);
+    // Visual feedback: brief glow on the income field
+    incomeInput.classList.remove('input-glow');
+    void incomeInput.offsetWidth; // force reflow to restart animation
+    incomeInput.classList.add('input-glow');
+  }
+  if (typeof switchTab === 'function') switchTab('Dashboard');
+  showMessage(msg || '✓ Salary applied successfully', 'success');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Salary Calculator Test Suite (console only — NOT auto-run)
+// Call testCalculator() manually from DevTools to verify logic.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Temporary test runner (console only)
+function testCalculator() {
+  const tests = [
+    {
+      name: "Normal (no deductions)",
+      input: { dailyRate: 500, daysWorked: 10 },
+      expect: { basePay: 5000, absenceDeduction: 0, lateDeduction: 0, takeHome: 5000 }
+    },
+    {
+      name: "With 1 absence",
+      input: { dailyRate: 500, daysWorked: 10, absences: 1 },
+      expect: { basePay: 5000, absenceDeduction: 500, takeHome: 4500 }
+    },
+    {
+      name: "With late + undertime (45 min total)",
+      input: { dailyRate: 500, daysWorked: 10, lateMinutes: 30, undertimeMinutes: 15 },
+      expect: { basePay: 5000, lateDeduction: 46.88, takeHome: 4953.13 }
+    },
+    {
+      name: "All deductions combined",
+      input: { dailyRate: 500, daysWorked: 10, absences: 1, lateMinutes: 30, undertimeMinutes: 15 },
+      expect: { basePay: 5000, absenceDeduction: 500, lateDeduction: 46.88, takeHome: 4453.13 }
+    },
+    {
+      name: "Extreme: 0 days worked",
+      input: { dailyRate: 500, daysWorked: 0, absences: 5 },
+      expect: { takeHome: 0 }
+    }
+  ];
+
+  console.log("═══ Cutoff Salary Calculator Tests ═══");
+  tests.forEach((t, i) => {
+    const result = calculateCutoffSalary(t.input);
+    let pass = true;
+    Object.keys(t.expect).forEach(key => {
+      if (result[key] !== t.expect[key]) pass = false;
+    });
+    console.log(`Test ${i + 1}: ${t.name} — ${pass ? "✅ PASS" : "❌ FAIL"}`, result);
+  });
+  console.log("═══ Tests Complete ═══");
+}
+
+// testCalculator(); // ← Removed: QA-only, must not run in production
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
