@@ -73,6 +73,11 @@
       </div>
       <div id="historyList"></div>
     </div>
+
+    <!-- ═══ TAB 4: SALARY CALCULATOR ═══ -->
+    <div id="tabSalary" class="tab-view">
+      <!-- Rendered dynamically by renderSalaryTab() in app.js -->
+    </div>
   </div>
 
   <!-- Quick Add Expense (collapsible bottom panel) -->
@@ -114,6 +119,39 @@
     </div>
   </div>
 
+  <!-- ═══ EDIT EXPENSE MODAL (Bottom Sheet) ═══ -->
+  <div id="editOverlay" class="edit-overlay hidden" onclick="closeEditModal()"></div>
+  <div id="editModal" class="edit-modal hidden">
+    <div class="edit-handle"></div>
+    <h3 class="edit-title">✏️ Edit Expense</h3>
+
+    <div class="edit-field">
+      <label class="edit-label" for="editAmount">Amount (₱)</label>
+      <input type="number" id="editAmount" placeholder="Amount" step="0.01" min="0.01">
+    </div>
+
+    <div class="edit-field">
+      <label class="edit-label" for="editNote">Description</label>
+      <input type="text" id="editNote" placeholder="What for?">
+    </div>
+
+    <div class="edit-field">
+      <label class="edit-label" for="editCategory">Category</label>
+      <select id="editCategory">
+        <option value="Food">🍔 Food</option>
+        <option value="Transpo">🚌 Transpo</option>
+        <option value="Needs">🛡️ Needs</option>
+        <option value="Wants">🎮 Wants</option>
+        <option value="Misc">📦 Misc</option>
+      </select>
+    </div>
+
+    <div class="edit-actions">
+      <button id="btnCancelEdit" class="edit-btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button id="btnSaveEdit" class="edit-btn-save" onclick="saveEditExpense()">Save Changes</button>
+    </div>
+  </div>
+
   <!-- Bottom Tab Bar -->
   <nav class="tab-bar">
     <button class="tab-bar-item active" onclick="switchTab('Dashboard')">
@@ -127,6 +165,10 @@
     <button class="tab-bar-item" onclick="switchTab('History')">
       <span class="tab-icon">📊</span>
       History
+    </button>
+    <button class="tab-bar-item" onclick="switchTab('Salary')">
+      <span class="tab-icon">💼</span>
+      Salary
     </button>
   </nav>
 
@@ -147,9 +189,9 @@
       document.getElementById('tab' + tabName).classList.add('active');
 
       // Highlight the correct tab bar button
-      const tabIndex = { Dashboard: 0, Expenses: 1, History: 2 };
+      const tabIndex = { Dashboard: 0, Expenses: 1, History: 2, Salary: 3 };
       const buttons = document.querySelectorAll('.tab-bar-item');
-      if (buttons[tabIndex[tabName]]) buttons[tabIndex[tabName]].classList.add('active');
+      if (buttons[tabIndex[tabName]] !== undefined) buttons[tabIndex[tabName]].classList.add('active');
 
       // Show/hide quick add based on tab
       const inputSection = document.getElementById('expenseInputSection');
@@ -162,6 +204,11 @@
       // Render history when switching to that tab
       if (tabName === 'History') {
         renderHistory();
+      }
+
+      // Render salary calculator when switching to that tab
+      if (tabName === 'Salary') {
+        if (typeof renderSalaryTab === 'function') renderSalaryTab();
       }
     }
 

@@ -146,6 +146,14 @@ body {
   flex-shrink: 0;
   padding: 4px 0;
   padding-bottom: env(safe-area-inset-bottom, 4px);
+  /* Fixed at very bottom, always above Quick Add panel */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  z-index: 200;
 }
 
 .tab-bar-item {
@@ -206,6 +214,12 @@ body {
   background: rgba(52, 211, 153, 0.15);
   color: var(--accent-green);
   border-color: rgba(52, 211, 153, 0.3);
+}
+
+.alert.warning {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--accent-yellow);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 @keyframes slideDown {
@@ -553,7 +567,7 @@ button.danger {
 /* ── Quick Add (Collapsible Bottom Panel) ── */
 #expenseInputSection {
   position: fixed;
-  bottom: 0;
+  bottom: 60px; /* sits above the fixed tab bar (≈60px tall) */
   left: 0;
   right: 0;
   background: var(--bg-tab-bar);
@@ -915,7 +929,346 @@ input[type="date"] {
   line-height: 1.5;
 }
 
+/* ── Income Input Glow (Milestone 4B) ── */
+@keyframes incomeGlow {
+  0% {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+  }
+  100% {
+    border-color: var(--border-subtle);
+    box-shadow: none;
+  }
+}
+
+input.input-glow {
+  animation: incomeGlow 1.2s ease-out forwards;
+}
+
+/* ── Salary Calculator (Milestone 4A) ── */
+
+/* Salary tab: no Quick Add overlay, just needs tab bar clearance */
+#tabSalary {
+  padding-bottom: 80px;
+}
+
+.salary-form-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px 16px 16px;
+  margin-bottom: 12px;
+}
+
+.salary-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.salary-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.salary-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+/* Three small inputs side by side */
+.salary-row-inputs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.salary-row-inputs .salary-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.salary-row-inputs input {
+  padding: 10px 10px;
+  font-size: 13px;
+}
+
+.salary-calc-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent-blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.15s, transform 0.15s;
+  letter-spacing: 0.3px;
+}
+
+.salary-calc-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* ── Result card ── */
+.salary-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px 16px 16px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.25s ease;
+}
+
+.salary-result-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.salary-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+
+.salary-breakdown-row:last-of-type {
+  border-bottom: none;
+}
+
+.srow-label {
+  color: var(--text-secondary);
+}
+
+.srow-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.salary-breakdown-row.deduction .srow-value {
+  color: var(--accent-red);
+}
+
+.salary-breakdown-row.gross {
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: none;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.salary-breakdown-row.gross .srow-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.salary-breakdown-row.gross .srow-value {
+  color: var(--accent-blue);
+}
+
+/* ── Take Home Pay highlight ── */
+.salary-takehome {
+  text-align: center;
+  padding: 20px 16px;
+  margin: 16px -2px 4px;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.salary-takehome-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent-green);
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.salary-takehome-amount {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--accent-green);
+  line-height: 1.1;
+}
+
+/* ── Use as Cutoff Income button ── */
+.salary-use-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  letter-spacing: 0.3px;
+}
+
+.salary-use-btn:active {
+  background: rgba(52, 211, 153, 0.2);
+  transform: scale(0.97);
+}
+
+.salary-use-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ── Scrollbar ── */
 .tab-content::-webkit-scrollbar {
   width: 0;
+}
+
+/* ═══════════════════════════════════════════
+   Milestone 5 — Edit Expense Bottom Sheet
+   ═══════════════════════════════════════════ */
+
+/* Overlay backdrop */
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3000;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.edit-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Bottom sheet container */
+.edit-modal {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: 12px 20px 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 3001;
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.edit-modal.hidden {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+/* Drag handle pill */
+.edit-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+/* Title */
+.edit-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Field groups */
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.edit-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+/* Actions row */
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.edit-btn-cancel {
+  flex: 1;
+  padding: 13px;
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.edit-btn-cancel:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.edit-btn-save {
+  flex: 1.5;
+  padding: 13px;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.2px;
+}
+
+.edit-btn-save:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* Body scroll lock when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+body.modal-open .tab-content {
+  overflow: hidden;
 }
